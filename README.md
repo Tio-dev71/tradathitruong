@@ -1,82 +1,147 @@
-# Đi Chùa Online
+# 🍵 TRÀ ĐÁ THỊ TRƯỜNG
 
-Sân khấu 3D tương tác để live TikTok, chạy cùng TikTok LIVE Studio trên máy tính Windows. Bối cảnh là một chánh điện. Người xem gõ `adidaphat` thì có nhân vật mang tên và avatar TikTok của họ đi lên thắp hương. Ai tặng quà thì máy quay áp sát theo người đó, sen vàng nở, cánh sen rơi, giọng đọc gọi tên cảm ơn kèm một lời chúc.
+> **"Ngồi xuống uống chén trà, nghe bà soi thị trường."**
 
-Đây là không gian thư giãn mang tính giải trí. Nó không phải chùa và không đại diện cho tổ chức tôn giáo nào. Quà tặng chỉ để nhận lời chúc, không phải tiền cúng dường hay để cầu may. Dòng lưu ý này chạy liên tục trên màn hình live.
+Web 3D Multiplayer Social Sandbox kết hợp tương tác NPC và hệ thống cung cấp tín hiệu thị trường ở chế độ demo. Lấy cảm hứng từ nét văn hóa quán trà đá vỉa hè Việt Nam dưới gốc cây đa cổ thụ, sản phẩm mang đến một không gian giải trí, giao lưu trader và nhận lời khuyên đầu tư hóm hỉnh từ Bà Bán Trà.
 
-## Tính năng
+---
 
-- **Thắp hương 3D.** Gõ `adidaphat` (hoặc từ khóa bạn tự đặt) hay tặng quà là nhân vật đi lên bậc thang, thắp hương, lạy 3 lạy rồi về chỗ. Tối đa 5 người cùng lúc, đứng so le hai hàng cho tên khỏi đè nhau; người sau xếp hàng, mỗi người tối đa 1 lần mỗi phút.
-- **Quay cận người tặng quà.** Máy quay áp sát (3,6 lần) theo người tặng từ lúc đi lên đến khi lạy xong, nền chuyển sang ảnh 4K cho nét, kèm bảng tên có avatar. Mỗi lần một người.
-- **Hội trường.** Gần 150 người ngồi chen kín hai bên lối đi, không theo hàng lối, mỗi người tự lạy theo nhịp riêng. Người xem mới vào được xếp chỗ sau 10 giây, tên hiện trên đầu. Hết chỗ thì người im lặng lâu nhất nhường chỗ.
-- **Hiệu ứng quà.** Quà càng lớn thì sen vàng càng to và chói, cánh sen hồng rơi càng nhiều và lâu.
-- **Thanh tim.** Đủ 666 tim thì mưa hoa sen 60 giây; một người thả bao nhiêu tim cũng được tính.
-- **Gieo quẻ.** Cả phòng thả đủ 99 tim là hộp gieo quẻ lắc, gieo một quẻ chung cho cả nhà: hiện bảng quẻ giữa màn hình và giọng đọc đọc quẻ. Có 36 quẻ, toàn lời khuyên nhẹ nhàng, không có quẻ xấu và không phán chuyện tiền bạc, tương lai (quẻ vui, để giải trí).
-- **TOP THÀNH TÂM.** Bảng 10 người điểm cao nhất: 1 comment được 1 điểm, 1 xu quà được 10 điểm. 6 người đầu quỳ trên hàng đệm trước bậc thang, có bảng tên. Bật/tắt bảng bằng một nút ở trang điều khiển, đổi được tên bảng.
-- **Tùy chỉnh trong trang điều khiển.** Tên kênh (giọng đọc xưng đúng tên này), từ khóa thay cho `adidaphat`, tên bảng xếp hạng, và ảnh nền riêng (tải ảnh lên, bấm một nút là về ảnh mặc định). Mọi tùy chỉnh được lưu lại, tắt mở app vẫn giữ.
-- **Giọng đọc tiếng Việt.** Chào người mới vào, cảm ơn người tặng quà (đọc trước mọi câu khác), chúc theo điều người xem cầu trong comment (thi cử, sức khỏe, tình duyên…), và tự chúc kèm nhắc chia sẻ khi live im lặng hơn 90 giây. Giọng đọc xưng bằng **tên kênh** bạn đặt.
-- **Khác:** nhạc nền, chuông, mõ, hạc bay ngang thỉnh thoảng, khói hương, lọc từ cấm khỏi tên và comment.
+## 🌟 Tính Năng Nổi Bật
 
-## Cần có
+1. **Thế Giới 3D Phong Cách Vỉa Hè Việt Nam (Genuine 3D World):**
+   - Dựng hoàn chỉnh bằng Three.js / WebGL: gạch lát vỉa hè truyền thống hoa văn tròn, gốc cây đa cổ thụ rợp bóng mát, tường vàng rêu phong với biển số "Khoan cắt bê tông", gánh nước, bàn trà mộc, phích nước Rạng Đông đỏ, ấm tích ủ rơm, chén trà hoa cúc, điếu cày nứa, rổ lạc rang, đĩa hạt hướng dương.
+   - Ghế nhựa Song Long xanh đỏ và đôn gỗ mộc mạc cho người chơi ngồi hóng chuyện.
+   - Hiệu ứng ánh sáng chiều tà vàng ấm (golden hour), bóng đổ mượt mà (PCFSoftShadowMap), đom đóm lập lòe và lá vàng rơi.
+   - Hệ thống phát hiện và ngăn cản va chạm vật lý (Collision Resolution) chống đi xuyên vật thể.
 
-- Máy tính **Windows** có card đồ họa tương đối (để chạy nhân vật 3D). File chạy `BAT-LIVE.bat` chỉ dùng được trên Windows.
-- [Node.js](https://nodejs.org) bản LTS.
-- TikTok LIVE Studio, đăng nhập tài khoản sẽ live.
-- Internet (giọng đọc, font chữ và tên miền `lvh.me` đều cần mạng).
+2. **Hệ Thống Nhân Vật Chibi Tùy Biến (Customizable 3D Avatars):**
+   - Màn hình tạo nhân vật với **3D Preview xoay 360° realtime**.
+   - Nhập biệt danh (tối đa 20 ký tự).
+   - 7 Vai trò khởi tạo:
+     - *Trader Tập Sự*
+     - *Thợ Săn Kèo*
+     - *Cao Thủ Đu Đỉnh*
+     - *Chiến Thần Bắt Đáy*
+     - *Nhà Tiên Tri Nến*
+     - *Ông Chú Ngồi Hóng*
+     - *Cá Mập Giả Nghèo*
+   - Tùy chỉnh kiểu tóc (short, spiky, bob, bun, ponytail), màu tóc, màu áo, màu quần, kính râm.
+   - Nametag 3D và huy hiệu vai trò nổi trên đầu nhân vật.
+   - Lưu trữ Guest Session gắn với localStorage và SQLite server, tự động khôi phục khi tải lại trang.
 
-## Cài và chạy
+3. **Multiplayer Realtime Đa Người Chơi (Socket.IO):**
+   - Hỗ trợ phòng chơi 20–30 người đồng thời.
+   - Đồng bộ chuyển động mượt mà với thuật toán nội suy Lerp.
+   - Kiểm tra tốc độ di chuyển trên server chống hack speed.
+   - Hệ thống chat thời gian thực và thanh Emote nhanh (Vẫy tay, Cười lớn, Uống trà, Gãi đầu, Cổ vũ).
 
-1. Tải về: nút **Code → Download ZIP** rồi giải nén, hoặc `git clone` repo này.
-2. Bấm đúp `BAT-LIVE.bat`. Lần đầu nó tự cài thư viện (1–2 phút), sau đó mở trang điều khiển ở `http://localhost:3000`.
-3. Ở trang điều khiển, ô **Tên kênh** (góc trên): gõ tên của bạn, ví dụ "Tâm An Nhiên", rồi bấm **Lưu**. Tên này hiện thành tiêu đề trên sân khấu và là tên giọng đọc dùng, ví dụ "A Di Đà Phật, Tâm An Nhiên xin chào bạn…". Tên được lưu vào file `settings.json`, tắt mở lại vẫn giữ. Cũng trong trang điều khiển, khung **Tùy chỉnh sân khấu** cho đổi từ khóa, tên bảng và ảnh nền (ảnh tải lên nằm trong thư mục `uploads`).
-4. Trong TikTok LIVE Studio, thêm nguồn **Link**:
-   - Link: `http://lvh.me:3000/?view=stage`
-   - Kích thước: 1080 × 1920
-5. Bắt đầu live, rồi ở trang điều khiển nhập username TikTok của bạn (không cần @) và bấm kết nối.
+4. **NPC "Trà Đá Thị Trường" & Dialogue Engine:**
+   - Bà cô bán nước người Việt ngồi quạt mát bên ấm trà, thân thiện và dí dỏm.
+   - Nhận diện phạm vi người chơi trong bán kính 2.8m hiển thị biểu tượng `[E] Trò chuyện`. Bà tự động quay đầu nhìn người chơi khi tới gần.
+   - Hộp thoại RPG với hiệu ứng gõ chữ (typewriter) và 6 tùy chọn hội thoại phong phú:
+     1. *"Cô ơi, cho cháu xin một kèo!"*
+     2. *"Hôm nay thị trường thế nào cô?"*
+     3. *"Cho cháu cốc trà đá."*
+     4. *"Cô kể chuyện trader đi!"*
+     5. *"Cháu ngồi hóng thôi."*
+     6. *"Tạm biệt cô!"*
+   - Hơn 40 câu thoại hài hước, phản ánh tâm lý và văn hóa trader đời thường.
 
-Giữ cửa sổ `BAT-LIVE.bat` mở suốt buổi live; đóng nó là tắt app.
+5. **Cơ Chế Xin Kèo 80/20 Phía Máy Chủ (Signal Decision Engine):**
+   - 80% xác suất Bà đồng ý soi kèo và mở sổ tay cung cấp tín hiệu demo.
+   - 20% xác suất Bà từ chối với lời khuyên bảo vệ vốn, giải tỏa tâm lý FOMO.
+   - Sử dụng bộ sinh số ngẫu nhiên mật mã phía máy chủ (`crypto.randomInt`), có thể điều chỉnh tỷ lệ qua Admin Panel.
+   - Cơ chế Cooldown 60 giây chống spam yêu cầu.
 
-### Lưu ý khi live
+6. **Tín Hiệu Demo & Webhook Ingestion Sẵn Sàng (Live Feed Integration):**
+   - Thẻ tín hiệu chi tiết: Symbol, Thị trường, Hướng lệnh (LONG/SHORT/WAIT), Vùng Entry, Stop Loss, Take Profit 1-2-3, Khung thời gian và Lời dặn dò của Bà.
+   - Gắn nhãn bắt buộc: **`DEMO – KHÔNG PHẢI TÍN HIỆU THẬT`**.
+   - Hỗ trợ nhận tín hiệu từ bên ngoài qua `POST /api/webhooks/signals` với bảo mật chữ ký HMAC-SHA256, chống replay attack và chống trùng lặp sự kiện (idempotency).
 
-- Chỉ trang trong LIVE Studio (`?view=stage`) phát tiếng. Trang điều khiển im lặng, mở bao nhiêu tab cũng được. Đừng mở thêm link `?view=stage` ở trình duyệt khác trong lúc live, nếu không sẽ nghe hai giọng.
-- `BAT-LIVE.bat` chạy ở chế độ live: sửa code không làm trang stage tự tải lại. Muốn nhận bản mới thì bấm làm mới nguồn Link trong LIVE Studio.
-- Điểm, thanh tim và người trong hội trường chỉ lưu trong trang stage; tải lại trang là đếm lại từ đầu.
-- App chỉ nhận kết nối từ chính máy đang chạy nó (127.0.0.1). `lvh.me` là tên miền công khai trỏ về 127.0.0.1, dùng vì LIVE Studio không nhận `localhost`.
+7. **Admin Dashboard Toàn Diện:**
+   - Theo dõi số lượng online, danh sách người chơi, lịch sử yêu cầu xin kèo.
+   - Điều chỉnh tỷ lệ chấp thuận 80/20 và thời gian cooldown tức thì.
+   - Chuyển đổi giữa chế độ Mock Provider và Webhook Provider.
+   - Nút kiểm thử nhanh Webhook trực tiếp từ giao diện.
 
-### Cập nhật bản mới
+8. **Âm Thanh Quê Hương Thư Giãn (Web Audio API Synthesizer):**
+   - Tiếng chim sẻ ríu rít ban chiều, tiếng ve kêu êm dịu.
+   - Tiếng rót trà đá róc rách, tiếng chén hoa cúc chạm nhau vui tai.
+   - 100% không phụ thuộc file âm thanh bên ngoài, không lo vấn đề bản quyền.
 
-Nếu đã clone bằng git: chạy `git pull` trong thư mục rồi mở lại `BAT-LIVE.bat`. Nếu tải ZIP: tải lại ZIP, rồi chép file `settings.json` và thư mục `uploads` từ thư mục cũ sang thư mục mới để giữ tên kênh, từ khóa, tên bảng và ảnh nền.
+---
 
-## Sửa lỗi thường gặp
+## 🚀 Cài Đặt & Khởi Chạy
 
-- **Không vào được `localhost:3000`.** Xem cửa sổ `BAT-LIVE.bat`: phải có dòng `Chùa Online LIVE server running on http://localhost:3000`. Nếu báo lỗi cài thư viện, xóa thư mục `node_modules` rồi chạy lại BAT để nó cài lại từ đầu. Nếu báo chưa có Node.js, cài Node.js bản LTS.
-- **Trình duyệt vào được nhưng thử `localhost` không ra:** mở `http://127.0.0.1:3000` thay thế.
-- **LIVE Studio không hiện gì với link `lvh.me`:** một số mạng hoặc phần mềm diệt virus chặn tên miền này. Mở Notepad bằng quyền Administrator, mở file `C:\Windows\System32\drivers\etc\hosts`, thêm dòng `127.0.0.1 lvh.me` ở cuối, lưu lại rồi làm mới nguồn Link.
-- **Báo lỗi `EADDRINUSE`:** cổng 3000 đang bị app khác dùng; tắt app đó (hoặc cửa sổ BAT cũ) rồi chạy lại.
+### Yêu Cầu Hệ Thống
+- [Node.js](https://nodejs.org) phiên bản 20 trở lên (khuyên dùng Node 22+).
+- Trình duyệt hiện đại hỗ trợ WebGL (Chrome, Edge, Safari, Firefox).
 
-## Phụ thuộc bên ngoài cần biết
+### 1. Cài Đặt Thư Viện
+```bash
+npm install
+```
 
-- **Đọc sự kiện TikTok** dùng thư viện không chính thức [`tiktok-live-connector`](https://github.com/zerodytrash/TikTok-Live-Connector). TikTok có thể thay đổi và làm nó ngừng chạy bất cứ lúc nào.
-- **Giọng đọc** dùng dịch vụ đọc của Microsoft Edge qua thư viện `msedge-tts` (giọng `vi-VN-NamMinhNeural`), lỗi thì chuyển sang giọng Google Translate. Cả hai đều không phải API chính thức cho mục đích này và có thể bị giới hạn.
-- **Luật của TikTok** về live tự động, live không có người thật và kêu gọi tặng quà có thể thay đổi. Người dùng tự chịu trách nhiệm tuân thủ luật của TikTok và pháp luật nơi mình sống, kể cả nghĩa vụ thuế với thu nhập từ quà tặng.
+### 2. Chạy Môi Trường Phát Triển (Development)
+```bash
+npm run dev
+```
+Mở trình duyệt tại: [http://localhost:3000](http://localhost:3000)
 
-## Tài nguyên (public/assets)
+### 3. Chạy Kiểm Thử Tự Động (Tests)
+```bash
+npm test
+```
 
-Giấy phép MIT trong file `LICENSE` **chỉ áp dụng cho code**. Các file dưới đây không nằm trong giấy phép đó. Trước khi dùng lại hoặc phát hành chúng, hãy tự kiểm tra quyền sử dụng.
+### 4. Build Bản Production
+```bash
+npm run build
+npm start
+```
 
-| File | Là gì | Nguồn và quyền |
-|---|---|---|
-| `3d/di.fbx`, `3d/khan.fbx`, `3d/quy.fbx`, `3d/thaphuong.fbx` | Động tác đi, quỳ, quỳ xuống, thắp hương | Tải từ [Adobe Mixamo](https://www.mixamo.com). Mixamo cho dùng miễn phí trong dự án của bạn; việc phát tán lại file gốc theo điều khoản của Adobe, chưa được xác nhận. |
-| `3d/nguoi.fbx` | Nhân vật mặc áo tràng xám | Do chủ dự án cung cấp; nguồn gốc và quyền phát tán chưa được xác nhận. |
-| `bg/chanh-dien-2.webp` | Tranh nền chánh điện (gốc) | Do chủ dự án cung cấp; nguồn gốc chưa được xác nhận. |
-| `bg/chanh-dien-2-hd.webp`, `bg/chanh-dien-2-4k.webp` | Bản phóng to của tranh nền | Tạo từ `chanh-dien-2.webp` bằng Real-ESRGAN (x4plus); quyền theo tranh gốc. |
-| `audio/chill_relax.mp3` | Nhạc nền mặc định | Tạo bằng mô hình AI ACE-Step. |
-| `audio/buddhist_flute.mp3`, `audio/khuc_thien_dao.mp3` | Nhạc nền khác | Có sẵn từ bản dựng ban đầu; nguồn chưa được xác nhận. |
-| `audio/niem_phat_nam_mo_a_di_da_phat.mp3` | Bản thu niệm Phật | Bản thu của người khác; nguồn và quyền chưa được xác nhận. Nên thay bằng bản bạn có quyền dùng. |
-| `devotees/phattu.png` | Hình người 2D (dùng khi máy không chạy được 3D) | Do chủ dự án cung cấp; nguồn chưa được xác nhận. |
+---
 
-Muốn thay file nào thì giữ nguyên tên file, app sẽ dùng file mới.
+## 🎮 Hướng Dẫn Điều Khiển
 
-## Giấy phép
+- **WASD / Phím Mũi Tên:** Di chuyển nhân vật.
+- **Giữ Shift:** Chạy nhanh.
+- **Rê Chuột:** Xoay camera 360° quanh nhân vật.
+- **Cuộn Chuột:** Phóng to / Thu nhỏ khoảng cách camera.
+- **Phím [E]:** Tương tác với Bà Bán Trà hoặc ngồi xuống ghế.
+- **Thiết Bị Di Động:** Sử dụng cần điều khiển Joystick ảo ở góc trái và các nút cảm ứng nổi ở góc phải.
 
-Code: [MIT](LICENSE). Tài nguyên: xem bảng trên.
+---
+
+## 📁 Cấu Trúc Dự Án
+
+```
+├── ARCHITECTURE.md          # Tài liệu kiến trúc toàn diện
+├── MIGRATION.md             # Kế hoạch và đánh giá di chuyển từ repo gốc
+├── docs/
+│   ├── ADMIN_GUIDE.md       # Hướng dẫn sử dụng Admin Dashboard
+│   ├── WEBHOOK_GUIDE.md     # Hướng dẫn format payload và ký HMAC cho Webhook
+│   └── TEST_RESULTS.md      # Báo cáo kết quả kiểm thử tự động
+├── src/
+│   ├── components/          # Giao diện React UI (HUD, Chat, Dialogue, Admin, Modal, Mobile)
+│   ├── npc/                 # Model 3D & logic NPC Trà Đá Thị Trường
+│   ├── player/              # Procedural Chibi Avatar Builder & PlayerController
+│   ├── server/              # Backend Express, SQLite DB, Socket.IO, Webhook & Admin APIs
+│   │   ├── db/              # SQLite Database Adapter (node:sqlite)
+│   │   ├── routes/          # Webhook & Admin routes
+│   │   ├── services/        # 80/20 Decision, Dialogue Engine, Signal Providers
+│   │   ├── socket/          # Socket.IO Multiplayer Hub
+│   │   └── validators/      # Zod validation schemas
+│   ├── services/            # Client Multiplayer Service & Web Audio Sound Engine
+│   ├── store/               # Zustand Game Store
+│   ├── types/               # TypeScript data definitions
+│   └── world/               # Three.js 3D Tea Stall World & Collision System
+├── tests/                   # Automated Vitest test suite (80/20 math, Webhook HMAC, Dialogue)
+├── server.ts                # Express + Socket.IO main server entrypoint
+└── vite.config.ts           # Vite bundler configuration
+```
+
+---
+
+## 📜 Bản Quyền & Giấy Phép (License)
+
+Dự án phát triển dựa trên nền tảng mã nguồn mở dưới giấy phép **MIT License**. Mọi tài nguyên đồ họa 3D và âm thanh trong phiên bản "Trà Đá Thị Trường" được tạo hoàn toàn bằng procedural geometry và Web Audio synthesizer, đảm bảo tính trong sạch về bản quyền thương mại.
