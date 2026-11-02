@@ -72,6 +72,7 @@ export function App() {
 
       const ctrl = playerControllerRef.current;
       ctrl.update(delta, localAvatarRigRef.current || undefined);
+      soundEngine.updateFootsteps(ctrl.isMoving, ctrl.isRunning, ctrl.isSitting);
 
       // Send local movement to server
       if (localAvatarRigRef.current) {
@@ -98,7 +99,12 @@ export function App() {
       scene.thayDo.setInteractPromptVisible(inRangeThayDo);
       scene.thayDo.update(performance.now() / 1000, ctrl.position, false);
 
-      setCanInteractNpc(inRangeNpc || inRangeThayDo);
+      // Check distance to Cậu Vàng (Dog) at (-4.2, 0, 0.8)
+      const distToDog = ctrl.position.distanceTo(scene.dog.position);
+      const inRangeDog = distToDog < 2.4;
+      scene.dog.update(performance.now() / 1000, ctrl.position);
+
+      setCanInteractNpc(inRangeNpc || inRangeThayDo || inRangeDog);
 
       // If player moved while sitting, automatically stand up
       if (isSitting && !ctrl.isSitting) {
@@ -188,7 +194,25 @@ export function App() {
       );
       return;
     }
-  }, [openDialogue]);
+
+    // 3. Check Cậu Vàng (Dog)
+    const scene = worldSceneRef.current;
+    if (scene && ctrl.position.distanceTo(scene.dog.position) < 2.5) {
+      soundEngine.playUiClick();
+      scene.dog.interact((phrase) => {
+        addChatMessage({
+          id: 'dog_' + Date.now(),
+          playerId: 'dog',
+          nickname: 'Cậu Vàng',
+          role: 'Ông Chú Ngồi Hóng',
+          text: phrase,
+          timestamp: Date.now(),
+          isSystem: true,
+        });
+      });
+      return;
+    }
+  }, [openDialogue, addChatMessage]);
 
   // 4. Handle Join Game
   const handleJoinGame = (
@@ -245,8 +269,26 @@ export function App() {
     setPlayer(pData);
     setIsCreateModalOpen(false);
 
+    // Connect Street Drama chat callback
+    world.streetDrama.setChatCallback((dramaText) => {
+      addChatMessage({
+        id: 'drama_' + Date.now(),
+        playerId: 'drama',
+        nickname: 'Phố Xá',
+        role: 'Cao Thủ Đu Đỉnh',
+        text: dramaText,
+        timestamp: Date.now(),
+        isSystem: true,
+      });
+    });
+
     // Start background sounds with lively street events
     soundEngine.startAmbience((streetText) => {
+      if (streetText.includes('🐕') && world) {
+        world.dog.bark();
+      } else if (streetText.includes('🗣️') && world) {
+        world.streetDrama.triggerDrama();
+      }
       addChatMessage({
         id: 'street_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
         playerId: 'street',

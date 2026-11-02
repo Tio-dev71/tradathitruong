@@ -3,6 +3,8 @@ import { CollisionSystem } from './CollisionSystem';
 import { TeaStallBuilder, type StoolSpot } from './TeaStallBuilder';
 import { buildTeaVendorNPC, type TeaVendorRig } from '../npc/TeaVendorNPC';
 import { buildThayDoNPC, type ThayDoRig } from '../npc/ThayDoNPC';
+import { DogCompanion } from './DogCompanion';
+import { StreetDramaSystem } from './StreetDramaSystem';
 import { TrafficSystem } from './TrafficSystem';
 import { buildChibiAvatar, type AvatarRig } from '../player/AvatarBuilder';
 import type { PlayerData, PlayerRole } from '../types/game';
@@ -22,6 +24,8 @@ export class WorldScene {
   public stallBuilder: TeaStallBuilder;
   public npc: TeaVendorRig;
   public thayDo: ThayDoRig;
+  public dog: DogCompanion;
+  public streetDrama: StreetDramaSystem;
   public trafficSystem: TrafficSystem;
 
   private container: HTMLElement;
@@ -79,10 +83,17 @@ export class WorldScene {
     this.scene.add(this.thayDo.group);
     this.collisionSystem.addCylinder(4.2, 1.8, 0.9);
 
-    // 8. Street Traffic System (Motorbikes & Cars)
+    // 8. Dog Companion (Cậu Vàng)
+    this.dog = new DogCompanion(this.scene, new THREE.Vector3(-4.2, 0, 0.8));
+    this.collisionSystem.addCylinder(-4.2, 0.8, 0.6);
+
+    // 9. Street Drama System (2 thanh niên chửi nhau ngẫu nhiên trên phố)
+    this.streetDrama = new StreetDramaSystem(this.scene);
+
+    // 10. Street Traffic System (Motorbikes & Cars)
     this.trafficSystem = new TrafficSystem(this.scene);
 
-    // 9. Ambient particles (Fireflies & Autumn leaves)
+    // 11. Ambient particles (Fireflies & Autumn leaves)
     this.setupParticles();
 
     // 8. Event listeners
@@ -254,8 +265,10 @@ export class WorldScene {
       );
     });
 
-    // 3. Update Street Traffic (Motorbikes & Cars)
+    // 3. Update Street Traffic (Motorbikes & Cars), Dog & Street Drama
     this.trafficSystem.update(delta);
+    this.dog.update(timeSec, this.camera.position);
+    this.streetDrama.update(delta, timeSec);
 
     // 4. Update Tiệm Vàng DJN Gold Billboard (Realtime tick & candlestick updates)
     if (this.stallBuilder.goldBillboard) {
@@ -308,6 +321,7 @@ export class WorldScene {
     }
     window.removeEventListener('resize', this.onWindowResize);
     this.trafficSystem.dispose();
+    this.streetDrama.dispose();
     this.clearAllRemotePlayers();
     this.renderer.dispose();
     if (this.renderer.domElement.parentElement) {

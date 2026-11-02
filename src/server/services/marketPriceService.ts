@@ -188,3 +188,4 @@ export class MarketPriceService {
 }
 
 export const marketPriceService = new MarketPriceService();
+

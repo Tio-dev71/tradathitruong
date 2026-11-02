@@ -15,6 +15,12 @@ class SoundEngine {
   private ambientTimer: number | null = null;
   private currentVoiceSource: AudioBufferSourceNode | null = null;
 
+  // Audio files cache & Footstep stream
+  private audioCache = new Map<string, AudioBuffer>();
+  private footstepSource: AudioBufferSourceNode | null = null;
+  private footstepGain: GainNode | null = null;
+  private isFootstepPlaying: boolean = false;
+
   private initContext() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -49,6 +55,148 @@ class SoundEngine {
 
   public getMuted(): boolean {
     return this.isMuted;
+  }
+
+  // --- Audio Buffer Caching & Playback Helper ---
+  public async loadAudioBuffer(url: string): Promise<AudioBuffer | null> {
+    if (this.audioCache.has(url)) {
+      return this.audioCache.get(url)!;
+    }
+    this.initContext();
+    if (!this.ctx) return null;
+
+    try {
+      let res = await fetch(url);
+      if (!res.ok) {
+        // Fallback alternate path between /audio/ and /assets/audio/
+        const altUrl = url.startsWith('/audio/')
+          ? url.replace('/audio/', '/assets/audio/')
+          : url.replace('/assets/audio/', '/audio/');
+        res = await fetch(altUrl);
+      }
+      if (!res.ok) return null;
+
+      const arrayBuffer = await res.arrayBuffer();
+      const decoded = await this.ctx.decodeAudioData(arrayBuffer);
+      this.audioCache.set(url, decoded);
+      return decoded;
+    } catch {
+      return null;
+    }
+  }
+
+  public async playSoundFile(
+    url: string,
+    volume = 0.5,
+    playbackRate = 1.0,
+    maxDuration?: number
+  ): Promise<AudioBufferSourceNode | null> {
+    if (this.isMuted) return null;
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return null;
+
+    try {
+      const buffer = await this.loadAudioBuffer(url);
+      if (!buffer) return null;
+
+      const source = this.ctx.createBufferSource();
+      source.buffer = buffer;
+      source.playbackRate.value = playbackRate;
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+
+      source.connect(gain);
+      gain.connect(this.sfxGain);
+
+      source.start(0);
+
+      if (maxDuration && maxDuration > 0) {
+        const stopTime = this.ctx.currentTime + maxDuration;
+        gain.gain.setValueAtTime(volume, stopTime - 0.4);
+        gain.gain.linearRampToValueAtTime(0.001, stopTime);
+        source.stop(stopTime);
+      }
+
+      return source;
+    } catch {
+      return null;
+    }
+  }
+
+  // --- Player Footsteps System (tiengbuocchan.mp3) ---
+  public startFootsteps(isRunning: boolean = false) {
+    if (this.isMuted) return;
+
+    if (this.isFootstepPlaying) {
+      if (this.footstepSource) {
+        this.footstepSource.playbackRate.value = isRunning ? 1.35 : 1.0;
+      }
+      return;
+    }
+
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+
+    this.isFootstepPlaying = true;
+    this.loadAudioBuffer('/assets/audio/tiengbuocchan.mp3').then((buffer) => {
+      if (!buffer || !this.isFootstepPlaying || !this.ctx || !this.sfxGain) return;
+
+      try {
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.playbackRate.value = isRunning ? 1.35 : 1.0;
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.01, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + 0.1);
+
+        source.connect(gain);
+        gain.connect(this.sfxGain);
+
+        source.start(0);
+        this.footstepSource = source;
+        this.footstepGain = gain;
+      } catch {
+        this.isFootstepPlaying = false;
+      }
+    });
+  }
+
+  public updateFootsteps(isMoving: boolean, isRunning: boolean, isSitting: boolean) {
+    if (!isMoving || isSitting || this.isMuted) {
+      this.stopFootsteps();
+    } else {
+      this.startFootsteps(isRunning);
+    }
+  }
+
+  public stopFootsteps() {
+    if (!this.isFootstepPlaying) return;
+    this.isFootstepPlaying = false;
+
+    if (this.footstepGain && this.ctx) {
+      try {
+        this.footstepGain.gain.setValueAtTime(this.footstepGain.gain.value, this.ctx.currentTime);
+        this.footstepGain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (this.footstepSource) {
+      const src = this.footstepSource;
+      this.footstepSource = null;
+      setTimeout(() => {
+        try {
+          src.stop();
+          src.disconnect();
+        } catch {
+          // ignore
+        }
+      }, 100);
+    }
   }
 
   // Microsoft Edge Vietnamese Neural Voice TTS Playback (Smooth & Natural)
@@ -247,8 +395,18 @@ class SoundEngine {
     osc.stop(now + 0.15);
   }
 
-  // Realistic Dog Bark SFX ("Gâu! Gâu!")
-  public playDogBark() {
+  // Realistic Dog Bark SFX (Uses real recording tiengchosua.mp3 with synth fallback)
+  public async playDogBark() {
+    if (this.isMuted) return;
+    this.initContext();
+
+    const played = await this.playSoundFile('/assets/audio/tiengchosua.mp3', 0.5, 1.0, 3.8);
+    if (!played) {
+      this.playSynthDogBark();
+    }
+  }
+
+  public playSynthDogBark() {
     if (this.isMuted) return;
     this.initContext();
     if (!this.ctx || !this.sfxGain) return;
@@ -364,6 +522,37 @@ class SoundEngine {
     }
 
     return phrase;
+  }
+
+  // Play real argument audio chuinhau1.mp3 or chuinhau2.mp3
+  public async playStreetArgument(): Promise<{
+    audioFile: string;
+    duration: number;
+    textA: string;
+    textB: string;
+    summary: string;
+  }> {
+    const isClip1 = Math.random() < 0.5;
+    const audioFile = isClip1 ? '/assets/audio/chuinhau1.mp3' : '/assets/audio/chuinhau2.mp3';
+    const duration = isClip1 ? 5.4 : 2.4;
+
+    await this.playSoundFile(audioFile, 0.7);
+
+    return isClip1
+      ? {
+          audioFile,
+          duration,
+          textA: 'Mày bảo ai đu đỉnh?! Có tin tao vả cho lệch sóng không hả?!',
+          textB: 'Thích bắt dao rơi không?! Ngon thì bước vào đây xem nào!',
+          summary: 'Hai thanh niên tranh cãi nảy lửa vì đu đỉnh và bắt dao rơi!',
+        }
+      : {
+          audioFile,
+          duration,
+          textA: 'Đi đứng kiểu gì đấy?! Vừa đi vừa dán mắt vào chart rồi đâm vào người ta à?!',
+          textB: 'Đường chung chứ của riêng nhà mày à mà đứng nghênh ngang chắn lối?!',
+          summary: 'Hai thanh niên va chạm xe máy quát tháo nhau om sòm ngoài phố!',
+        };
   }
 
   public startAmbience(onStreetEvent?: (text: string) => void) {

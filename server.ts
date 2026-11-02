@@ -41,6 +41,8 @@ marketPriceService.setSocketServer(io);
 marketPriceService.startPolling(6000);
 
 // API Routes
+app.use('/audio', express.static(path.join(__dirname, 'public/assets/audio')));
+app.use('/assets/audio', express.static(path.join(__dirname, 'public/assets/audio')));
 app.use('/api/webhooks', webhookRouter);
 app.use('/api/admin', adminRouter);
 
