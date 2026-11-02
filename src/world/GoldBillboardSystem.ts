@@ -47,6 +47,10 @@ export class GoldBillboardSystem {
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.minFilter = THREE.LinearFilter;
     this.texture.magFilter = THREE.LinearFilter;
+    // Flip U so text renders correctly when plane faces -Z towards the street
+    this.texture.wrapS = THREE.RepeatWrapping;
+    this.texture.repeat.x = -1;
+    this.texture.offset.x = 1;
 
     this.buildBillboardMesh();
     this.renderCanvas();
@@ -68,44 +72,47 @@ export class GoldBillboardSystem {
   }
 
   private buildBillboardMesh() {
-    const width = 5.8;
-    const height = 3.2;
+    const width = 6.2;
+    const height = 3.4;
 
-    // LED Screen plane
+    // LED Screen plane facing outwards (-Z) towards the street
     const screenGeo = new THREE.PlaneGeometry(width, height);
     const screenMat = new THREE.MeshBasicMaterial({
       map: this.texture,
+      side: THREE.DoubleSide,
       toneMapped: false,
     });
     const screen = new THREE.Mesh(screenGeo, screenMat);
-    screen.position.set(0, 0, 0.08);
+    screen.rotation.y = Math.PI; // Face outwards to the street
+    screen.position.set(0, 0, -0.06);
     this.mesh.add(screen);
 
     // Frame bezel
-    const frameGeo = new THREE.BoxGeometry(width + 0.3, height + 0.3, 0.2);
+    const frameGeo = new THREE.BoxGeometry(width + 0.35, height + 0.35, 0.15);
     const frameMat = new THREE.MeshStandardMaterial({
       color: 0x1a1a1a,
       metalness: 0.8,
       roughness: 0.3,
     });
     const frame = new THREE.Mesh(frameGeo, frameMat);
+    frame.position.set(0, 0, 0.02);
     frame.castShadow = true;
     this.mesh.add(frame);
 
     // Golden decorative top header bar
-    const topBarGeo = new THREE.BoxGeometry(width + 0.4, 0.25, 0.25);
+    const topBarGeo = new THREE.BoxGeometry(width + 0.45, 0.28, 0.25);
     const goldMat = new THREE.MeshStandardMaterial({
       color: 0xd4af37,
       metalness: 0.85,
       roughness: 0.25,
     });
     const topBar = new THREE.Mesh(topBarGeo, goldMat);
-    topBar.position.set(0, height / 2 + 0.2, 0.05);
+    topBar.position.set(0, height / 2 + 0.2, -0.02);
     this.mesh.add(topBar);
 
-    // Subtle neon glow light in front of the board
-    const boardGlow = new THREE.PointLight(0xffd700, 1.2, 12);
-    boardGlow.position.set(0, 0, 1.5);
+    // High-power LED spotlight illuminating down into the street
+    const boardGlow = new THREE.PointLight(0xffe082, 2.0, 16);
+    boardGlow.position.set(0, 0, -1.2);
     this.mesh.add(boardGlow);
   }
 
@@ -333,3 +340,4 @@ export class GoldBillboardSystem {
     this.texture.needsUpdate = true;
   }
 }
+

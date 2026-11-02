@@ -111,3 +111,4 @@ describe('Economy Credit System & Tea Luck Boost', () => {
     expect(boostedWithTea).toBeLessThanOrEqual(0.98);
   });
 });
+

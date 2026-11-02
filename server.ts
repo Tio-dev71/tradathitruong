@@ -9,6 +9,7 @@ import { webhookRouter } from './src/server/routes/webhookRoutes';
 import { adminRouter } from './src/server/routes/adminRoutes';
 import { setupMultiplayerSocket } from './src/server/socket/multiplayerHandler';
 import { discordSignalRelay } from './src/server/services/discordSignalRelay';
+import { marketPriceService } from './src/server/services/marketPriceService';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
 dotenv.config();
@@ -36,28 +37,38 @@ const io = new SocketIOServer(httpServer, {
 
 setupMultiplayerSocket(io);
 discordSignalRelay.setSocketServer(io);
+marketPriceService.setSocketServer(io);
+marketPriceService.startPolling(6000);
 
 // API Routes
 app.use('/api/webhooks', webhookRouter);
 app.use('/api/admin', adminRouter);
 
-// Gold Price Endpoints (Tiệm Vàng DJN Live Billboard API)
+// Market Price Endpoints (Free Binance Public API & Tiệm Vàng DJN Live Feeds)
+app.get('/api/market-prices', (_req, res) => {
+  res.json({
+    success: true,
+    data: marketPriceService.getAllTickers(),
+  });
+});
+
 app.get('/api/gold-price', (_req, res) => {
+  const gold = marketPriceService.getTicker('XAU/USD');
   res.json({
     symbol: 'XAU/USD',
-    price: 2748.50,
-    change: 18.60,
-    changePercent: 0.68,
+    price: gold?.price ?? 2748.50,
+    change: gold?.change ?? 18.60,
+    changePercent: gold?.changePercent ?? 0.68,
     currency: 'USD',
     unit: 'oz',
-    updatedAt: Date.now(),
+    updatedAt: gold?.updatedAt ?? Date.now(),
   });
 });
 
 app.post('/api/gold-price', (req, res) => {
   const { price, change, changePercent } = req.body;
   if (typeof price === 'number') {
-    io.emit('gold:update', { price, change, changePercent });
+    marketPriceService.updatePrice('XAU/USD', price, change, changePercent);
     return res.json({ success: true, price });
   }
   return res.status(400).json({ success: false, error: 'Price must be a number' });
@@ -89,12 +100,12 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// Audio / TTS endpoint (Vietnamese voice for NPC)
+// Audio / TTS endpoint (Vietnamese voice for NPC: Bà Bán Trà & Thầy Đồ)
 const ttsCache = new Map<string, Buffer>();
 
-async function getVoiceTts(text: string): Promise<Buffer> {
+async function getVoiceTts(text: string, voiceName = 'vi-VN-HoaiMyNeural'): Promise<Buffer> {
   const tts = new MsEdgeTTS();
-  await tts.setMetadata('vi-VN-HoaiMyNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+  await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
   const { audioStream } = tts.toStream(text);
   const chunks: Buffer[] = [];
   return new Promise<Buffer>((resolve, reject) => {
@@ -110,12 +121,20 @@ app.get('/api/tts', async (req, res) => {
     if (!text) {
       return res.status(400).send('Missing text parameter');
     }
+    const voiceQuery = String(req.query.voice || '').toLowerCase();
+    // 'thay_do' / 'namminh' -> vi-VN-NamMinhNeural; 'ba_ban_tra' / default -> vi-VN-HoaiMyNeural
+    const voiceName = (voiceQuery === 'thay_do' || voiceQuery === 'namminh')
+      ? 'vi-VN-NamMinhNeural'
+      : 'vi-VN-HoaiMyNeural';
+
     const cleanText = text.slice(0, 300);
-    let audio = ttsCache.get(cleanText);
+    const cacheKey = `${voiceName}:${cleanText}`;
+
+    let audio = ttsCache.get(cacheKey);
     if (!audio) {
       try {
-        audio = await getVoiceTts(cleanText);
-        ttsCache.set(cleanText, audio);
+        audio = await getVoiceTts(cleanText, voiceName);
+        ttsCache.set(cacheKey, audio);
       } catch (err) {
         console.warn('Edge TTS unavailable, skipping audio stream:', err);
         return res.status(503).json({ error: 'TTS temporarily unavailable' });

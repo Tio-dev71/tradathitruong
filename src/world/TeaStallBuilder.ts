@@ -131,10 +131,10 @@ export class TeaStallBuilder {
       flatShading: true,
     });
 
-    // Main gnarly trunk
-    const trunkGeo = new THREE.CylinderGeometry(1.4, 2.2, 7, 10);
+    // Main gnarly trunk (Elevated to 8.5m so leafy canopy arches comfortably overhead)
+    const trunkGeo = new THREE.CylinderGeometry(1.4, 2.2, 8.5, 10);
     const trunk = new THREE.Mesh(trunkGeo, barkMat);
-    trunk.position.y = 3.5;
+    trunk.position.y = 4.25;
     trunk.castShadow = true;
     trunk.receiveShadow = true;
     treeGroup.add(trunk);
@@ -149,23 +149,23 @@ export class TeaStallBuilder {
       { x: 1.5, z: 2.2, r: 0.22 },
     ];
     aerialRootPositions.forEach((root) => {
-      const rootGeo = new THREE.CylinderGeometry(root.r, root.r * 1.3, 6, 6);
+      const rootGeo = new THREE.CylinderGeometry(root.r, root.r * 1.3, 7.5, 6);
       const rootMesh = new THREE.Mesh(rootGeo, barkMat);
-      rootMesh.position.set(root.x, 3, root.z);
+      rootMesh.position.set(root.x, 3.75, root.z);
       rootMesh.rotation.z = (Math.random() - 0.5) * 0.15;
       rootMesh.castShadow = true;
       treeGroup.add(rootMesh);
       this.collisionSystem.addCylinder(treeX + root.x, treeZ + root.z, root.r * 1.5);
     });
 
-    // Sprawling canopy branches & foliage clusters
+    // Sprawling canopy branches & foliage clusters (Arching high above y >= 8.2m so signs are never obscured)
     const branchCoords = [
-      { x: -3.5, y: 6.8, z: 0, s: 3.2, mat: leafMat },
-      { x: 3.2, y: 7.2, z: -1.5, s: 3.6, mat: leafHighlightMat },
-      { x: 0, y: 8.5, z: 0, s: 4.2, mat: leafMat },
-      { x: -2.0, y: 7.5, z: 2.8, s: 3.4, mat: leafHighlightMat },
-      { x: 2.5, y: 6.5, z: 2.5, s: 3.0, mat: leafMat },
-      { x: -1.0, y: 6.2, z: -3.5, s: 3.1, mat: leafHighlightMat },
+      { x: -3.5, y: 8.6, z: 0, s: 3.2, mat: leafMat },
+      { x: 3.2, y: 8.8, z: -1.5, s: 3.5, mat: leafHighlightMat },
+      { x: 0, y: 10.0, z: 0, s: 4.0, mat: leafMat },
+      { x: -2.0, y: 9.0, z: 2.8, s: 3.2, mat: leafHighlightMat },
+      { x: 2.5, y: 8.4, z: 2.5, s: 3.0, mat: leafMat },
+      { x: -1.0, y: 8.6, z: -3.5, s: 3.0, mat: leafHighlightMat },
     ];
 
     branchCoords.forEach((b) => {
@@ -611,16 +611,16 @@ export class TeaStallBuilder {
     townGroup.position.set(0, 0, 24);
 
     const colors = [0xd6a858, 0x5b8a99, 0xcc845b, 0xa3a375, 0xd4b077];
-    const buildingWidth = 7.0;
+    const buildingWidth = 7.2;
 
     for (let i = -3; i <= 3; i++) {
       if (i === 0) {
-        // --- FLAGSHIP: TIỆM VÀNG DJN ---
-        const djnHeight = 13.5;
-        const djnWidth = 8.2;
+        // --- FLAGSHIP: TIỆM VÀNG DJN (Tòa nhà sang trọng bề thế) ---
+        const djnHeight = 14.0;
+        const djnWidth = 8.8;
         const djnMat = new THREE.MeshStandardMaterial({
           color: 0x661010, // Royal Burgundy & Gold Luxury Theme
-          roughness: 0.7,
+          roughness: 0.65,
         });
 
         // Main building block
@@ -633,31 +633,52 @@ export class TeaStallBuilder {
         // Gold Trim Cornices on Building Top and Middle
         const goldTrimMat = new THREE.MeshStandardMaterial({
           color: 0xd4af37,
-          metalness: 0.8,
-          roughness: 0.25,
+          metalness: 0.85,
+          roughness: 0.2,
         });
-        const topRoofCornice = new THREE.Mesh(new THREE.BoxGeometry(djnWidth + 0.4, 0.4, 8.4), goldTrimMat);
+        const topRoofCornice = new THREE.Mesh(new THREE.BoxGeometry(djnWidth + 0.4, 0.45, 8.4), goldTrimMat);
         topRoofCornice.position.set(0, djnHeight, 0);
         townGroup.add(topRoofCornice);
 
-        const midCornice = new THREE.Mesh(new THREE.BoxGeometry(djnWidth + 0.3, 0.3, 8.3), goldTrimMat);
-        midCornice.position.set(0, 4.8, 0);
+        const midCornice = new THREE.Mesh(new THREE.BoxGeometry(djnWidth + 0.3, 0.35, 8.3), goldTrimMat);
+        midCornice.position.set(0, 4.9, 0);
         townGroup.add(midCornice);
 
-        // Ground Floor Gold Shop Glass Entrance & Pillars
-        const glassMat = new THREE.MeshStandardMaterial({
-          color: 0x223344,
-          roughness: 0.1,
-          metalness: 0.6,
+        // Ground Floor Gold Shop Showroom & Warm Lighting
+        const showroomMat = new THREE.MeshStandardMaterial({
+          color: 0x3d1414,
+          roughness: 0.4,
         });
-        const glassDoor = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.2, 0.1), glassMat);
-        glassDoor.position.set(0, 1.6, -4.05);
-        townGroup.add(glassDoor);
+        const showroom = new THREE.Mesh(new THREE.BoxGeometry(5.2, 3.4, 1.2), showroomMat);
+        showroom.position.set(0, 1.7, -3.6);
+        townGroup.add(showroom);
+
+        // Glass display counter with gold bullion
+        const counterMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.3 });
+        const counter = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.0, 0.6), counterMat);
+        counter.position.set(0, 0.9, -3.8);
+        counter.castShadow = true;
+        townGroup.add(counter);
+
+        // Sparkling gold ingots on counter
+        [-1.2, 0, 1.2].forEach((gx) => {
+          const goldBar = new THREE.Mesh(
+            new THREE.BoxGeometry(0.5, 0.2, 0.3),
+            new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.9, roughness: 0.15 })
+          );
+          goldBar.position.set(gx, 1.5, -3.8);
+          townGroup.add(goldBar);
+        });
+
+        // Warm Golden Showroom Interior Light
+        const shopInteriorLight = new THREE.PointLight(0xffe082, 2.4, 12);
+        shopInteriorLight.position.set(0, 2.4, -3.2);
+        townGroup.add(shopInteriorLight);
 
         // Two Golden Pillars at entrance
-        [-2.3, 2.3].forEach((px) => {
-          const goldPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 4.4, 12), goldTrimMat);
-          goldPillar.position.set(px, 2.2, -4.1);
+        [-3.2, 3.2].forEach((px) => {
+          const goldPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 4.6, 12), goldTrimMat);
+          goldPillar.position.set(px, 2.3, -4.15);
           goldPillar.castShadow = true;
           townGroup.add(goldPillar);
         });
@@ -671,7 +692,7 @@ export class TeaStallBuilder {
           sCtx.fillStyle = '#4a0e0e';
           sCtx.fillRect(0, 0, 1024, 256);
           sCtx.strokeStyle = '#ffd700';
-          sCtx.lineWidth = 12;
+          sCtx.lineWidth = 14;
           sCtx.strokeRect(10, 10, 1004, 236);
 
           sCtx.fillStyle = '#ffd700';
@@ -685,33 +706,35 @@ export class TeaStallBuilder {
         }
         const djnSignTex = new THREE.CanvasTexture(signCanvas);
         const djnSignMesh = new THREE.Mesh(
-          new THREE.BoxGeometry(6.6, 1.3, 0.15),
+          new THREE.BoxGeometry(7.0, 1.35, 0.15),
           new THREE.MeshStandardMaterial({ map: djnSignTex, roughness: 0.3 })
         );
-        djnSignMesh.position.set(0, 4.0, -4.15);
+        djnSignMesh.position.set(0, 4.1, -4.18);
         townGroup.add(djnSignMesh);
 
         // --- GIANT ELECTRONIC LIVE GOLD BILLBOARD (BẢNG GIÁ VÀNG QUỐC TẾ) ---
+        // Positioned at y = 7.4m directly on the 2nd floor facade, facing outwards across the street
         this.goldBillboard = new GoldBillboardSystem();
-        this.goldBillboard.mesh.position.set(0, 8.2, -4.12);
+        this.goldBillboard.mesh.position.set(0, 7.4, -4.15);
         townGroup.add(this.goldBillboard.mesh);
 
         // Storefront Spotlights
-        const signSpot = new THREE.PointLight(0xffd700, 1.8, 14);
-        signSpot.position.set(0, 5.2, -5.0);
+        const signSpot = new THREE.PointLight(0xffd700, 2.0, 14);
+        signSpot.position.set(0, 5.2, -5.2);
         townGroup.add(signSpot);
 
         continue;
       }
 
-      // Other Shophouses
+      // Other Shophouses (Separated cleanly by alleyways)
+      const posX = i > 0 ? (i * buildingWidth + 0.8) : (i * buildingWidth - 0.8);
       const bColor = colors[Math.abs(i) % colors.length];
       const bMat = new THREE.MeshStandardMaterial({ color: bColor, roughness: 0.85 });
 
       // 2-3 Storey Shophouse
       const height = 9 + (Math.abs(i) % 3) * 1.5;
-      const bMesh = new THREE.Mesh(new THREE.BoxGeometry(buildingWidth - 0.4, height, 8), bMat);
-      bMesh.position.set(i * buildingWidth, height / 2, 0);
+      const bMesh = new THREE.Mesh(new THREE.BoxGeometry(buildingWidth - 0.6, height, 8), bMat);
+      bMesh.position.set(posX, height / 2, 0);
       bMesh.castShadow = true;
       bMesh.receiveShadow = true;
       townGroup.add(bMesh);
@@ -722,24 +745,24 @@ export class TeaStallBuilder {
 
       [-1.8, 1.8].forEach((wx) => {
         const win = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.6, 0.1), windowMat);
-        win.position.set(i * buildingWidth + wx, height * 0.65, -4.05);
+        win.position.set(posX + wx, height * 0.65, -4.05);
         townGroup.add(win);
 
         const shutterL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.6, 0.08), shutterMat);
-        shutterL.position.set(i * buildingWidth + wx - 0.7, height * 0.65, -4.06);
+        shutterL.position.set(posX + wx - 0.7, height * 0.65, -4.06);
         townGroup.add(shutterL);
 
         const shutterR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.6, 0.08), shutterMat);
-        shutterR.position.set(i * buildingWidth + wx + 0.7, height * 0.65, -4.06);
+        shutterR.position.set(posX + wx + 0.7, height * 0.65, -4.06);
         townGroup.add(shutterR);
       });
 
-      // Ground floor shop awning
+      // Ground floor shop awning (Sized appropriately so it does not overlap DJN Gold shop)
       const awning = new THREE.Mesh(
-        new THREE.BoxGeometry(buildingWidth - 0.8, 0.15, 2.0),
+        new THREE.BoxGeometry(buildingWidth - 1.2, 0.15, 2.0),
         new THREE.MeshStandardMaterial({ color: (i % 2 === 0) ? 0x9e2a2b : 0x1d3557 })
       );
-      awning.position.set(i * buildingWidth, 3.8, -4.8);
+      awning.position.set(posX, 3.8, -4.8);
       awning.rotation.x = 0.2;
       awning.castShadow = true;
       townGroup.add(awning);
@@ -748,10 +771,10 @@ export class TeaStallBuilder {
     this.scene.add(townGroup);
   }
 
-  // 8. Signboard
+  // 8. Signboard (Placed in the open front at y = 3.6, z = -2.6, completely free of tree branches)
   private buildSignboard() {
     const signGroup = new THREE.Group();
-    signGroup.position.set(0, 4.2, -4.5);
+    signGroup.position.set(0, 3.6, -2.6);
 
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
@@ -785,11 +808,30 @@ export class TeaStallBuilder {
     signMesh.castShadow = true;
     signGroup.add(signMesh);
 
+    // Sturdy wooden support posts from ground (y = -3.6) up to the sign
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x543821, roughness: 0.85 });
+    [-2.6, 2.6].forEach((px) => {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 3.8, 8), postMat);
+      post.position.set(px, -1.9, 0);
+      post.castShadow = true;
+      signGroup.add(post);
+    });
+
+    // Small corrugated tin/tile rooflet over the sign
+    const rooflet = new THREE.Mesh(
+      new THREE.BoxGeometry(5.6, 0.1, 0.6),
+      new THREE.MeshStandardMaterial({ color: 0x8a3324, roughness: 0.7 })
+    );
+    rooflet.position.set(0, 0.72, 0.12);
+    rooflet.rotation.x = 0.25;
+    rooflet.castShadow = true;
+    signGroup.add(rooflet);
+
     // Hanging lanterns
     const lanternMat = new THREE.MeshStandardMaterial({
       color: 0xff3b30,
       emissive: 0xff4500,
-      emissiveIntensity: 0.4,
+      emissiveIntensity: 0.7,
     });
     const lanternGeo = new THREE.SphereGeometry(0.28, 8, 8);
 
@@ -800,6 +842,11 @@ export class TeaStallBuilder {
     const lanternR = new THREE.Mesh(lanternGeo, lanternMat);
     lanternR.position.set(2.8, -0.4, 0);
     signGroup.add(lanternR);
+
+    // Warm illumination on the sign
+    const signLight = new THREE.PointLight(0xffecd2, 1.2, 8);
+    signLight.position.set(0, 0.5, 1.2);
+    signGroup.add(signLight);
 
     this.scene.add(signGroup);
   }

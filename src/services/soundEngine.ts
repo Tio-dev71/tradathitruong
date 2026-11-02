@@ -13,6 +13,7 @@ class SoundEngine {
 
   private isAmbientRunning: boolean = false;
   private ambientTimer: number | null = null;
+  private currentVoiceSource: AudioBufferSourceNode | null = null;
 
   private initContext() {
     if (!this.ctx) {
@@ -48,6 +49,42 @@ class SoundEngine {
 
   public getMuted(): boolean {
     return this.isMuted;
+  }
+
+  // Microsoft Edge Vietnamese Neural Voice TTS Playback (Smooth & Natural)
+  public async playNpcVoice(text: string, voice: 'hoaimy' | 'namminh' = 'hoaimy') {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    // Remove bracket annotations like [ĐỒNG Ý] or [TỪ CHỐI] for natural speech
+    const cleanSpeech = text.replace(/\[.*?\]/g, '').trim();
+    if (!cleanSpeech) return;
+
+    try {
+      if (this.currentVoiceSource) {
+        try {
+          this.currentVoiceSource.stop();
+        } catch {
+          // already stopped
+        }
+        this.currentVoiceSource = null;
+      }
+
+      const res = await fetch(`/api/tts?text=${encodeURIComponent(cleanSpeech)}&voice=${voice}`);
+      if (!res.ok) return;
+
+      const arrayBuffer = await res.arrayBuffer();
+      const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+
+      const source = this.ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(this.sfxGain || this.ctx.destination);
+      source.start();
+      this.currentVoiceSource = source;
+    } catch {
+      // Graceful fallback if network is offline
+    }
   }
 
   // Ceramic Teacup Clink SFX (Tiếng cụng chén trà hoa cúc)

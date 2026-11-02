@@ -25,6 +25,7 @@ export interface MultiplayerCallbacks {
   onErrorJoin: (data: { message: string }) => void;
   onCreditsUpdate?: (data: { credits: number; teaCount: number; cost: number; action: string; message: string }) => void;
   onGoldUpdate?: (data: { price: number; change?: number; changePercent?: number }) => void;
+  onMarketTickers?: (tickers: Record<string, any>) => void;
 }
 
 export class MultiplayerService {
@@ -110,6 +111,10 @@ export class MultiplayerService {
 
     this.socket.on('gold:update', (data) => {
       this.callbacks.onGoldUpdate?.(data);
+    });
+
+    this.socket.on('market:tickers', (data) => {
+      this.callbacks.onMarketTickers?.(data);
     });
   }
 

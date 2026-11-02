@@ -100,3 +100,4 @@ curl -X POST http://localhost:3000/api/webhooks/discord \
      `⚡ KÈO VIP MỚI TỪ BOT TRADING: [SHORT] XRP/USD (Entry: $1.25 | TP: $1.24 | SL: $1.26)! Ra xin bà hoặc thầy để nhận chi tiết!`
 4. **Cập nhật Bảng Giá Vàng DJN:**
    - Nếu coin là `XAU/USD` hoặc `GOLD`, hệ thống sẽ tự động cập nhật ngay giá khớp lệnh lên màn hình LED khổng lồ của **Tiệm Vàng DJN** bên kia đường!
+

@@ -17,6 +17,7 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
     setIsAdminOpen,
     cooldownRemaining,
     creditsNotification,
+    marketTickers,
   } = useGameStore();
 
   const handleSoundToggle = () => {
@@ -58,6 +59,32 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
             </div>
           </div>
         </div>
+
+        {/* Top-Center: Live Binance Market Tickers Ribbon */}
+        {Object.keys(marketTickers).length > 0 && (
+          <div className="hidden xl:flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#1a120c]/85 border border-amber-700/50 shadow-xl backdrop-blur-md pointer-events-auto">
+            {Object.values(marketTickers).map((ticker) => {
+              const isUp = ticker.change >= 0;
+              return (
+                <div
+                  key={ticker.symbol}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-stone-900/90 border border-stone-800 text-[11px] font-mono shadow-inner"
+                  title={`${ticker.symbol}: Giá $${ticker.price.toLocaleString()} (${isUp ? '+' : ''}${ticker.changePercent.toFixed(2)}%)`}
+                >
+                  <span className="font-bold text-amber-300">
+                    {ticker.symbol === 'XAU/USD' ? '🥇 VÀNG' : ticker.symbol.replace('/USDT', '')}
+                  </span>
+                  <span className="text-white font-semibold">
+                    ${ticker.price >= 100 ? ticker.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ticker.price.toFixed(3)}
+                  </span>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isUp ? 'text-emerald-400 bg-emerald-950/80' : 'text-rose-400 bg-rose-950/80'}`}>
+                    {isUp ? '▲ +' : '▼ '}{ticker.changePercent.toFixed(2)}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Top-Right: Player Info, Online Counter & Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3 pointer-events-auto">

@@ -41,6 +41,10 @@ interface GameState {
   // Settings
   settings: GameSettings;
 
+  // Market Tickers (Live BTC, ETH, XRP, Gold prices)
+  marketTickers: Record<string, { symbol: string; price: number; change: number; changePercent: number }>;
+  setMarketTickers: (tickers: Record<string, { symbol: string; price: number; change: number; changePercent: number }>) => void;
+
   // Actions
   setPlayer: (player: PlayerData | null) => void;
   updateCredits: (credits: number, teaCount?: number) => void;
@@ -71,6 +75,7 @@ export const useGameStore = create<GameState>((set) => ({
   isAdminOpen: false,
   isCreateModalOpen: true,
   creditsNotification: null,
+  marketTickers: {},
 
   dialogue: {
     isOpen: false,
@@ -100,6 +105,7 @@ export const useGameStore = create<GameState>((set) => ({
       };
     }),
   setCreditsNotification: (creditsNotification) => set({ creditsNotification }),
+  setMarketTickers: (marketTickers) => set({ marketTickers }),
   setOnlineCount: (onlineCount) => set({ onlineCount }),
   setOnlinePlayers: (onlinePlayers) => set({ onlinePlayers }),
   addRemotePlayer: (newPlayer) =>

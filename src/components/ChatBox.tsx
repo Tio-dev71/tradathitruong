@@ -132,6 +132,8 @@ export const ChatBox: React.FC<Props> = ({ onEmote }) => {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            onKeyUp={(e) => e.stopPropagation()}
             placeholder="Nói gì đó với mọi người..."
             maxLength={180}
             className="flex-1 bg-black/60 border border-amber-800/60 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"

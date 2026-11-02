@@ -40,6 +40,7 @@ export function App() {
     setDialogueText,
     isCreateModalOpen,
     setIsCreateModalOpen,
+    setMarketTickers,
   } = useGameStore();
 
   const [isSitting, setIsSitting] = useState(false);
@@ -282,6 +283,9 @@ export function App() {
         onGoldUpdate: (data) => {
           world.updateGoldPrice(data.price, data.change, data.changePercent);
         },
+        onMarketTickers: (tickers) => {
+          setMarketTickers(tickers);
+        },
         onPlayerJoined: (newPlayer) => {
           world.addRemotePlayer(newPlayer);
           soundEngine.playNotification();
@@ -322,18 +326,22 @@ export function App() {
         },
         onNpcSpeech: (data) => {
           world.npc.showSpeech(data.text);
+          soundEngine.playNpcVoice(data.text, 'hoaimy');
           setTimeout(() => {
             world.npc.hideSpeech();
           }, 8000);
         },
         onThayDoSpeech: (data) => {
           world.thayDo.showSpeech(data.text);
+          soundEngine.playNpcVoice(data.text, 'namminh');
           setTimeout(() => {
             world.thayDo.hideSpeech();
           }, 8000);
         },
         onNpcDialogueReply: (data) => {
           setDialogueText(data.text);
+          const voice = data.speaker.includes('Thầy') ? 'namminh' : 'hoaimy';
+          soundEngine.playNpcVoice(data.text, voice);
         },
         onOnlineCount: (count) => {
           setOnlineCount(count);

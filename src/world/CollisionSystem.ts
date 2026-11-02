@@ -34,7 +34,7 @@ export class CollisionSystem {
   public resolveMovement(
     currentPos: { x: number; z: number },
     targetPos: { x: number; z: number },
-    playerRadius: number = 0.5
+    playerRadius: number = 0.45
   ): { x: number; z: number } {
     let newX = targetPos.x;
     let newZ = targetPos.z;
@@ -43,50 +43,45 @@ export class CollisionSystem {
     newX = Math.max(this.boundary.minX + playerRadius, Math.min(this.boundary.maxX - playerRadius, newX));
     newZ = Math.max(this.boundary.minZ + playerRadius, Math.min(this.boundary.maxZ - playerRadius, newZ));
 
-    // 2. Cylinder obstacles (e.g. tree trunk, barrels)
-    for (const c of this.cylinders) {
-      const minDistance = c.radius + playerRadius;
-      const dx = newX - c.x;
-      const dz = newZ - c.z;
-      const distSq = dx * dx + dz * dz;
-
-      if (distSq < minDistance * minDistance && distSq > 0.0001) {
-        const dist = Math.sqrt(distSq);
-        const overlap = minDistance - dist;
-        // Push out along collision normal
-        newX += (dx / dist) * overlap;
-        newZ += (dz / dist) * overlap;
+    // Collision check helper
+    const collidesAt = (px: number, pz: number) => {
+      // Check cylinders
+      for (const c of this.cylinders) {
+        const minDistance = c.radius + playerRadius;
+        const dx = px - c.x;
+        const dz = pz - c.z;
+        if (dx * dx + dz * dz < minDistance * minDistance) {
+          return true;
+        }
       }
+      // Check boxes
+      for (const b of this.boxes) {
+        if (
+          px > b.minX - playerRadius &&
+          px < b.maxX + playerRadius &&
+          pz > b.minZ - playerRadius &&
+          pz < b.maxZ + playerRadius
+        ) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // 2. Axis-independent sliding resolution (Quake / Unity style wall sliding)
+    // First step: Move along X only
+    let resolvedX = newX;
+    if (collidesAt(resolvedX, currentPos.z)) {
+      resolvedX = currentPos.x; // Blocked along X, allow sliding along Z
     }
 
-    // 3. Box obstacles (e.g. tables, walls, counters)
-    for (const b of this.boxes) {
-      const expandedMinX = b.minX - playerRadius;
-      const expandedMaxX = b.maxX + playerRadius;
-      const expandedMinZ = b.minZ - playerRadius;
-      const expandedMaxZ = b.maxZ + playerRadius;
-
-      if (
-        newX > expandedMinX &&
-        newX < expandedMaxX &&
-        newZ > expandedMinZ &&
-        newZ < expandedMaxZ
-      ) {
-        // Find closest edge to push player out
-        const distLeft = Math.abs(newX - expandedMinX);
-        const distRight = Math.abs(newX - expandedMaxX);
-        const distTop = Math.abs(newZ - expandedMinZ);
-        const distBottom = Math.abs(newZ - expandedMaxZ);
-
-        const minDist = Math.min(distLeft, distRight, distTop, distBottom);
-        if (minDist === distLeft) newX = expandedMinX;
-        else if (minDist === distRight) newX = expandedMaxX;
-        else if (minDist === distTop) newZ = expandedMinZ;
-        else newZ = expandedMaxZ;
-      }
+    // Second step: Move along Z using resolved X
+    let resolvedZ = newZ;
+    if (collidesAt(resolvedX, resolvedZ)) {
+      resolvedZ = currentPos.z; // Blocked along Z, allow sliding along X
     }
 
-    return { x: newX, z: newZ };
+    return { x: resolvedX, z: resolvedZ };
   }
 }
 

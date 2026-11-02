@@ -47,21 +47,50 @@ export class PlayerController {
     this.bindEvents();
   }
 
+  public resetKeys() {
+    this.keys = {};
+    this.isPointerDown = false;
+  }
+
   private bindEvents() {
+    const normalizeKey = (code: string, key: string): string => {
+      const lower = key ? key.toLowerCase() : '';
+      if (code === 'KeyW' || lower === 'w') return 'KeyW';
+      if (code === 'KeyS' || lower === 's') return 'KeyS';
+      if (code === 'KeyA' || lower === 'a') return 'KeyA';
+      if (code === 'KeyD' || lower === 'd') return 'KeyD';
+      return code;
+    };
+
     window.addEventListener('keydown', (e) => {
       // Don't capture WASD if typing in chat input
       if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') {
         return;
       }
-      this.keys[e.code] = true;
+      const k = normalizeKey(e.code, e.key);
+      this.keys[k] = true;
 
-      if (e.code === 'KeyE') {
+      if (e.code === 'KeyE' || e.key === 'e' || e.key === 'E') {
         this.onInteract?.();
       }
     });
 
     window.addEventListener('keyup', (e) => {
+      const k = normalizeKey(e.code, e.key);
+      this.keys[k] = false;
+      // Also clear standard code
       this.keys[e.code] = false;
+    });
+
+    // Reset all pressed keys when window loses focus or user switches tabs
+    window.addEventListener('blur', () => {
+      this.resetKeys();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        this.resetKeys();
+      }
     });
 
     // Mouse drag for camera orbit
