@@ -89,3 +89,4 @@ export class CollisionSystem {
     return { x: newX, z: newZ };
   }
 }
+

@@ -37,3 +37,4 @@ Admin Control Panel của **Trà Đá Thị Trường** cho phép người quả
 ### 3.4. Kiểm Thử Nhanh Webhook
 - Bấm nút **"⚡ Gửi Test Webhook Signal"** trên bảng điều khiển.
 - Hệ thống sẽ tự động tạo một payload tín hiệu hợp lệ, ký chữ ký HMAC-SHA256 chuẩn và đẩy vào cơ sở dữ liệu để kiểm tra tính năng nhận tín hiệu ngay lập tức.
+

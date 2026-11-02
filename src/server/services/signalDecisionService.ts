@@ -113,9 +113,77 @@ export class SignalDecisionService {
     };
   }
 
+  // Cơ Chế Xóc Đĩa 60/40 Của Ông Thầy Đồ
+  public async requestThayDoSignal(playerId: string, role: PlayerRole = 'Trader Tập Sự'): Promise<SignalDecisionResult> {
+    const now = Date.now();
+    const cooldownSec = 45; // 45s cooldown cho Thầy Đồ
+
+    const cooldownCheck = this.checkCooldown(playerId + '_thaydo');
+    if (cooldownCheck.onCooldown) {
+      return {
+        allowed: false,
+        npcQuote: `Thầy vừa xóc xong mỏi tay quá! Đợi ${cooldownCheck.remainingSeconds} giây nữa thầy mới gieo quẻ xóc đĩa tiếp được con ơi!`,
+        cooldownSeconds: cooldownSec,
+        remainingCooldown: cooldownCheck.remainingSeconds,
+        nextAllowedAt: cooldownCheck.nextAllowedAt,
+      };
+    }
+
+    // 60% Thầy cho tín hiệu, 40% Thầy từ chối
+    const randomVal = crypto.randomInt(0, 10000);
+    const isAllowed = randomVal < 6000; // 60%
+
+    const nextAllowedAt = now + cooldownSec * 1000;
+    this.playerCooldowns.set(playerId + '_thaydo', {
+      lastRequestedAt: now,
+      nextAllowedAt,
+    });
+
+    if (!isAllowed) {
+      const rejectQuote = dialogueService.getThayDoRejectQuote();
+      db.logSignalRequest(playerId, role, false, `[Thầy Đồ] ${rejectQuote}`);
+      return {
+        allowed: false,
+        npcQuote: rejectQuote,
+        cooldownSeconds: cooldownSec,
+        remainingCooldown: cooldownSec,
+        nextAllowedAt,
+      };
+    }
+
+    // 60% Case: Thầy đồng ý
+    const provider = signalProviderManager.getActiveProvider();
+    const signal = await provider.getAvailableSignal(role);
+    const acceptQuote = dialogueService.getThayDoAcceptQuote();
+
+    if (!signal) {
+      const emptyQuote = 'Thầy mở bát ra mà quẻ biến ảo quá chưa thấy nến rõ ràng, giữ tiền cũng là có lộc đấy con!';
+      db.logSignalRequest(playerId, role, true, `[Thầy Đồ] ${emptyQuote}`);
+      return {
+        allowed: true,
+        npcQuote: emptyQuote,
+        cooldownSeconds: cooldownSec,
+        remainingCooldown: cooldownSec,
+        nextAllowedAt,
+      };
+    }
+
+    db.logSignalRequest(playerId, role, true, `[Thầy Đồ] ${acceptQuote}`, signal.id);
+
+    return {
+      allowed: true,
+      npcQuote: acceptQuote,
+      signal,
+      cooldownSeconds: cooldownSec,
+      remainingCooldown: cooldownSec,
+      nextAllowedAt,
+    };
+  }
+
   public resetCooldown(playerId: string) {
     this.playerCooldowns.delete(playerId);
   }
 }
 
 export const signalDecisionService = new SignalDecisionService();
+

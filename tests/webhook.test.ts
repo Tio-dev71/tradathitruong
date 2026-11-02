@@ -56,3 +56,4 @@ describe('Webhook Security & Ingestion', () => {
     expect(db.hasWebhookEvent(eventId)).toBe(true);
   });
 });
+

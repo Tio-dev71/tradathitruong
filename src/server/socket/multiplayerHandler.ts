@@ -270,6 +270,31 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
           speaker: 'Bà Bán Trà',
           text: comment,
         });
+      } else if (data.action === 'thay_do_signal') {
+        const result = await signalDecisionService.requestThayDoSignal(player.id, player.role);
+        socket.emit('signal:response', { ...result, sourceNpc: 'thay_do' });
+
+        io.emit('thay_do:speech', {
+          speaker: 'Thầy Đồ Xóc Đĩa',
+          text: result.npcQuote,
+          targetPlayerId: player.id,
+          targetNickname: player.nickname,
+          allowed: result.allowed,
+        });
+      } else if (data.action === 'thay_do_chan_le') {
+        const comment = dialogueService.getThayDoChanLe();
+        socket.emit('npc:dialogue_reply', {
+          action: data.action,
+          speaker: 'Thầy Đồ Xóc Đĩa',
+          text: comment,
+        });
+      } else if (data.action === 'thay_do_van_han') {
+        const comment = dialogueService.getThayDoVanHan();
+        socket.emit('npc:dialogue_reply', {
+          action: data.action,
+          speaker: 'Thầy Đồ Xóc Đĩa',
+          text: comment,
+        });
       }
     });
 
@@ -283,3 +308,4 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
     });
   });
 }
+

@@ -326,3 +326,4 @@ export function buildTeaVendorNPC(): TeaVendorRig {
     setInteractPromptVisible,
   };
 }
+

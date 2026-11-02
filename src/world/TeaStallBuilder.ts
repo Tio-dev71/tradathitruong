@@ -1,9 +1,16 @@
 import * as THREE from 'three';
 import type { CollisionSystem } from './CollisionSystem';
 
+export interface StoolSpot {
+  x: number;
+  z: number;
+  facingY: number; // angle in radians facing towards table
+}
+
 export class TeaStallBuilder {
   private scene: THREE.Scene;
   private collisionSystem: CollisionSystem;
+  public stoolSpots: StoolSpot[] = [];
 
   constructor(scene: THREE.Scene, collisionSystem: CollisionSystem) {
     this.scene = scene;
@@ -18,10 +25,12 @@ export class TeaStallBuilder {
     this.buildPlasticStools();
     this.buildSignboard();
     this.buildBlackboard();
+    this.buildPowerPolesAndWires();
+    this.buildAcrossStreetBuildings();
     this.buildVillageSurroundings();
   }
 
-  // 1. Sidewalk pavement & Village road
+  // 1. Sidewalk pavement, curb & Asphalt Street with crosswalk
   private buildGround() {
     // Generate procedural tile texture for authentic sidewalk look
     const canvas = document.createElement('canvas');
@@ -50,7 +59,7 @@ export class TeaStallBuilder {
     tileTexture.wrapT = THREE.RepeatWrapping;
     tileTexture.repeat.set(16, 16);
 
-    const groundGeo = new THREE.PlaneGeometry(60, 60);
+    const groundGeo = new THREE.PlaneGeometry(70, 40);
     const groundMat = new THREE.MeshStandardMaterial({
       map: tileTexture,
       roughness: 0.85,
@@ -58,14 +67,15 @@ export class TeaStallBuilder {
     });
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
     groundMesh.rotation.x = -Math.PI / 2;
+    groundMesh.position.set(0, 0, 0);
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
 
-    // Dirt road strip on the front edge
-    const roadGeo = new THREE.PlaneGeometry(60, 16);
+    // Asphalt Road (Mặt đường nhựa)
+    const roadGeo = new THREE.PlaneGeometry(80, 20);
     const roadMat = new THREE.MeshStandardMaterial({
-      color: 0x6e5944,
-      roughness: 0.95,
+      color: 0x2b2b2b, // Dark asphalt
+      roughness: 0.85,
     });
     const roadMesh = new THREE.Mesh(roadGeo, roadMat);
     roadMesh.rotation.x = -Math.PI / 2;
@@ -73,11 +83,24 @@ export class TeaStallBuilder {
     roadMesh.receiveShadow = true;
     this.scene.add(roadMesh);
 
+    // White painted pedestrian crosswalk (Vạch kẻ đường sang phố)
+    const zebraGroup = new THREE.Group();
+    zebraGroup.position.set(-6, 0.03, 16);
+    const stripeMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.7 });
+    for (let i = 0; i < 7; i++) {
+      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 12), stripeMat);
+      stripe.rotation.x = -Math.PI / 2;
+      stripe.position.set(i * 1.8, 0, 0);
+      stripe.receiveShadow = true;
+      zebraGroup.add(stripe);
+    }
+    this.scene.add(zebraGroup);
+
     // Curb edge separating sidewalk from road
-    const curbGeo = new THREE.BoxGeometry(60, 0.25, 0.6);
-    const curbMat = new THREE.MeshStandardMaterial({ color: 0x9e9e9e, roughness: 0.7 });
+    const curbGeo = new THREE.BoxGeometry(70, 0.28, 0.6);
+    const curbMat = new THREE.MeshStandardMaterial({ color: 0x8e8e8e, roughness: 0.7 });
     const curb = new THREE.Mesh(curbGeo, curbMat);
-    curb.position.set(0, 0.12, 8);
+    curb.position.set(0, 0.14, 8);
     curb.castShadow = true;
     curb.receiveShadow = true;
     this.scene.add(curb);
@@ -113,10 +136,9 @@ export class TeaStallBuilder {
     trunk.receiveShadow = true;
     treeGroup.add(trunk);
 
-    // Register tree trunk in collision system
     this.collisionSystem.addCylinder(treeX, treeZ, 2.4);
 
-    // Hanging aerial roots (Rễ phụ buông rủ)
+    // Hanging aerial roots
     const aerialRootPositions = [
       { x: -2.2, z: 1.2, r: 0.25 },
       { x: 2.1, z: -1.5, r: 0.3 },
@@ -154,21 +176,19 @@ export class TeaStallBuilder {
     this.scene.add(treeGroup);
   }
 
-  // 3. Weathered Vietnamese yellow wall with stencil graffiti
+  // 3. Colonial Yellow Wall with Stencils
   private buildColonialWall() {
     const wallGroup = new THREE.Group();
     wallGroup.position.set(0, 0, -8);
 
-    // Canvas texture for vintage wall with "KHOAN CẮT BÊ TÔNG"
     const wallCanvas = document.createElement('canvas');
     wallCanvas.width = 1024;
     wallCanvas.height = 512;
     const ctx = wallCanvas.getContext('2d');
     if (ctx) {
-      ctx.fillStyle = '#dfaa46'; // Hanoi classic colonial ochre yellow
+      ctx.fillStyle = '#dfaa46';
       ctx.fillRect(0, 0, 1024, 512);
 
-      // Weathering & rêu phong
       ctx.fillStyle = '#a67d32';
       for (let i = 0; i < 20; i++) {
         ctx.beginPath();
@@ -176,11 +196,9 @@ export class TeaStallBuilder {
         ctx.fill();
       }
 
-      // Mold/moss patches near bottom
       ctx.fillStyle = '#4f5e3b';
       ctx.fillRect(0, 420, 1024, 92);
 
-      // Stenciled Vietnamese phone numbers "KH.C. BÊ TÔNG 0912.289.306"
       ctx.fillStyle = '#1c2833';
       ctx.font = 'bold 32px monospace';
       ctx.fillText('KH.CẮT BÊ TÔNG', 120, 140);
@@ -204,10 +222,9 @@ export class TeaStallBuilder {
     wallMesh.receiveShadow = true;
     wallGroup.add(wallMesh);
 
-    // Corrugated iron awning (Mái tôn rỉ sét)
     const roofGeo = new THREE.BoxGeometry(26, 0.1, 4.5);
     const roofMat = new THREE.MeshStandardMaterial({
-      color: 0x6e4a3b, // Rusted metal color
+      color: 0x6e4a3b,
       roughness: 0.8,
       metalness: 0.3,
     });
@@ -217,20 +234,17 @@ export class TeaStallBuilder {
     roof.castShadow = true;
     wallGroup.add(roof);
 
-    // Wall collision
     this.collisionSystem.addBox(-14, -8.6, 14, -7.4);
-
     this.scene.add(wallGroup);
   }
 
-  // 4. Main Tea Stall Table & Vietnamese Tea Props
+  // 4. Main Tea Stall Table & Props
   private buildTeaTableAndProps() {
     const stallGroup = new THREE.Group();
     const stallX = 0;
     const stallZ = -1.5;
     stallGroup.position.set(stallX, 0, stallZ);
 
-    // Main low wooden tea table
     const tableTopGeo = new THREE.BoxGeometry(3.2, 0.12, 1.6);
     const woodMat = new THREE.MeshStandardMaterial({ color: 0x543821, roughness: 0.75 });
     const tableTop = new THREE.Mesh(tableTopGeo, woodMat);
@@ -239,7 +253,6 @@ export class TeaStallBuilder {
     tableTop.receiveShadow = true;
     stallGroup.add(tableTop);
 
-    // Table legs
     const legGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.8, 6);
     const legOffsets = [
       { x: -1.4, z: -0.65 },
@@ -256,7 +269,7 @@ export class TeaStallBuilder {
 
     this.collisionSystem.addBox(stallX - 1.8, stallZ - 1.0, stallX + 1.8, stallZ + 1.0);
 
-    // Traditional straw-insulated tea basket with blue ceramic teapot (Ấm tích ủ rơm)
+    // Straw-insulated tea basket with blue teapot (Ấm tích ủ rơm)
     const strawBasketGeo = new THREE.CylinderGeometry(0.35, 0.3, 0.45, 12);
     const strawMat = new THREE.MeshStandardMaterial({ color: 0xd4a359, roughness: 0.95 });
     const strawBasket = new THREE.Mesh(strawBasketGeo, strawMat);
@@ -264,7 +277,6 @@ export class TeaStallBuilder {
     strawBasket.castShadow = true;
     stallGroup.add(strawBasket);
 
-    // Ceramic teapot neck & handle
     const teapotGeo = new THREE.CylinderGeometry(0.18, 0.22, 0.25, 10);
     const ceramicMat = new THREE.MeshStandardMaterial({ color: 0x1f4e78, roughness: 0.2, metalness: 0.1 });
     const teapot = new THREE.Mesh(teapotGeo, ceramicMat);
@@ -272,7 +284,7 @@ export class TeaStallBuilder {
     teapot.castShadow = true;
     stallGroup.add(teapot);
 
-    // Classic Red Rạng Đông Thermos (Phích nước Rạng Đông)
+    // Red Rạng Đông Thermos (Phích nước)
     const thermosBodyGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.65, 12);
     const redMat = new THREE.MeshStandardMaterial({ color: 0xbf1515, roughness: 0.4, metalness: 0.1 });
     const thermos = new THREE.Mesh(thermosBodyGeo, redMat);
@@ -280,13 +292,14 @@ export class TeaStallBuilder {
     thermos.castShadow = true;
     stallGroup.add(thermos);
 
-    const thermosCapGeo = new THREE.CylinderGeometry(0.08, 0.12, 0.15, 10);
-    const silverMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.7, roughness: 0.3 });
-    const thermosCap = new THREE.Mesh(thermosCapGeo, silverMat);
+    const thermosCap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.12, 0.15, 10),
+      new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.7, roughness: 0.3 })
+    );
     thermosCap.position.set(-1.2, 1.55, -0.2);
     stallGroup.add(thermosCap);
 
-    // Traditional Vietnamese tea cups (Chén hoa cúc)
+    // Teacups
     const cupGeo = new THREE.CylinderGeometry(0.09, 0.06, 0.12, 8);
     const cupMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
     const teaLiquidMat = new THREE.MeshStandardMaterial({ color: 0xb58c1b, roughness: 0.1 });
@@ -308,30 +321,27 @@ export class TeaStallBuilder {
       stallGroup.add(teaLiquid);
     });
 
-    // Plate of roasted sunflower seeds (Đĩa hạt hướng dương)
-    const plateGeo = new THREE.CylinderGeometry(0.24, 0.2, 0.04, 12);
-    const plateMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.4 });
-    const plate = new THREE.Mesh(plateGeo, plateMat);
+    // Plate of sunflower seeds & Peanut basket
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.2, 0.04, 12), new THREE.MeshStandardMaterial({ color: 0xeeeeee }));
     plate.position.set(0.8, 0.88, 0.1);
     stallGroup.add(plate);
 
-    const seedsGeo = new THREE.CylinderGeometry(0.2, 0.18, 0.03, 10);
-    const seedsMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
-    const seeds = new THREE.Mesh(seedsGeo, seedsMat);
+    const seeds = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.03, 10), new THREE.MeshStandardMaterial({ color: 0x222222 }));
     seeds.position.set(0.8, 0.91, 0.1);
     stallGroup.add(seeds);
 
-    // Peanut basket (Rổ lạc luộc)
-    const peanutBasketGeo = new THREE.CylinderGeometry(0.26, 0.2, 0.1, 10);
-    const peanutBasketMat = new THREE.MeshStandardMaterial({ color: 0xc49a45, roughness: 0.9 });
-    const peanutBasket = new THREE.Mesh(peanutBasketGeo, peanutBasketMat);
+    const peanutBasket = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.26, 0.2, 0.1, 10),
+      new THREE.MeshStandardMaterial({ color: 0xc49a45, roughness: 0.9 })
+    );
     peanutBasket.position.set(0.9, 0.91, -0.35);
     stallGroup.add(peanutBasket);
 
-    // Bamboo water pipe (Điếu cày nứa) leaning on the table
-    const pipeGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.85, 8);
-    const bambooMat = new THREE.MeshStandardMaterial({ color: 0xa87e3b, roughness: 0.5 });
-    const pipe = new THREE.Mesh(pipeGeo, bambooMat);
+    // Bamboo water pipe (Điếu cày nứa)
+    const pipe = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.04, 0.04, 0.85, 8),
+      new THREE.MeshStandardMaterial({ color: 0xa87e3b, roughness: 0.5 })
+    );
     pipe.position.set(1.5, 0.5, 0.6);
     pipe.rotation.z = 0.4;
     pipe.rotation.x = 0.3;
@@ -341,23 +351,23 @@ export class TeaStallBuilder {
     this.scene.add(stallGroup);
   }
 
-  // 5. Iconic Red & Blue Vietnamese Plastic Stools (Ghế nhựa vỉa hè)
+  // 5. Plastic Stools with exact Snap coordinates
   private buildPlasticStools() {
     const redMat = new THREE.MeshStandardMaterial({ color: 0xdf2828, roughness: 0.5 });
     const blueMat = new THREE.MeshStandardMaterial({ color: 0x1d70b8, roughness: 0.5 });
 
-    const createStool = (x: number, z: number, colorMat: THREE.Material) => {
+    const createStool = (x: number, z: number, colorMat: THREE.Material, facingY: number) => {
       const stoolGroup = new THREE.Group();
       stoolGroup.position.set(x, 0, z);
 
-      // Seat top
+      // Seat top (Height = 0.42)
       const seatGeo = new THREE.BoxGeometry(0.48, 0.06, 0.48);
       const seat = new THREE.Mesh(seatGeo, colorMat);
       seat.position.y = 0.42;
       seat.castShadow = true;
       stoolGroup.add(seat);
 
-      // 4 tapered angled legs
+      // 4 tapered legs
       const legGeo = new THREE.CylinderGeometry(0.03, 0.035, 0.42, 6);
       const legOffsets = [
         { x: -0.18, z: -0.18 },
@@ -373,25 +383,153 @@ export class TeaStallBuilder {
       });
 
       this.scene.add(stoolGroup);
-      this.collisionSystem.addCylinder(x, z, 0.35);
+      this.stoolSpots.push({ x, z, facingY });
     };
 
-    // Stool positions around the table and along the sidewalk
-    const stoolList = [
-      { x: -1.2, z: 0.2, mat: redMat },
-      { x: -0.4, z: 0.4, mat: blueMat },
-      { x: 0.4, z: 0.5, mat: redMat },
-      { x: 1.3, z: 0.3, mat: blueMat },
-      { x: -2.4, z: -0.8, mat: redMat },
-      { x: 2.5, z: -0.5, mat: blueMat },
-      { x: -2.0, z: 2.2, mat: blueMat },
-      { x: 2.2, z: 2.5, mat: redMat },
-    ];
-
-    stoolList.forEach((s) => createStool(s.x, s.z, s.mat));
+    // Stool positions facing towards the tea table (table is at 0, -1.5)
+    createStool(-1.2, 0.4, redMat, Math.PI); // Facing north towards table
+    createStool(-0.4, 0.5, blueMat, Math.PI);
+    createStool(0.4, 0.5, redMat, Math.PI);
+    createStool(1.2, 0.4, blueMat, Math.PI);
+    createStool(-2.3, -1.2, redMat, Math.PI / 2); // Facing east
+    createStool(2.3, -1.2, blueMat, -Math.PI / 2); // Facing west
+    createStool(-1.8, 2.4, blueMat, Math.PI);
+    createStool(1.8, 2.4, redMat, Math.PI);
   }
 
-  // 6. Signboard: "TRÀ ĐÁ THỊ TRƯỜNG"
+  // 6. Concrete Power Poles with Tangled Wires (Cột điện dây điện chằng chịt)
+  private buildPowerPolesAndWires() {
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x8a8a8a, roughness: 0.8 });
+    const crossBarMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.6 });
+    const wireMat = new THREE.LineBasicMaterial({ color: 0x111111, linewidth: 2 });
+
+    const polePositions = [
+      { x: -16, z: 8.5 },
+      { x: 16, z: 8.5 },
+      { x: -18, z: 23 },
+      { x: 18, z: 23 },
+    ];
+
+    polePositions.forEach((pos) => {
+      const poleGroup = new THREE.Group();
+      poleGroup.position.set(pos.x, 0, pos.z);
+
+      // Centrifugal concrete pole (Cột điện bê tông li tâm)
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 9, 10), poleMat);
+      pole.position.y = 4.5;
+      pole.castShadow = true;
+      poleGroup.add(pole);
+
+      // Steel Cross Arms (Xà đỡ sứ)
+      const arm1 = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.1, 0.1), crossBarMat);
+      arm1.position.y = 8.2;
+      poleGroup.add(arm1);
+
+      const arm2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.1, 0.1), crossBarMat);
+      arm2.position.y = 7.6;
+      poleGroup.add(arm2);
+
+      // Street Lamp attached to pole
+      const lampArm = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6), crossBarMat);
+      lampArm.position.set(0.6, 7.8, 0);
+      lampArm.rotation.z = -0.5;
+      poleGroup.add(lampArm);
+
+      const lampHead = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3, 0.15, 0.2),
+        new THREE.MeshStandardMaterial({ color: 0xfffae6, emissive: 0xffe082, emissiveIntensity: 0.9 })
+      );
+      lampHead.position.set(1.4, 8.2, 0);
+      poleGroup.add(lampHead);
+
+      const streetLight = new THREE.PointLight(0xffdf80, 1.2, 14);
+      streetLight.position.set(1.4, 8.0, 0);
+      poleGroup.add(streetLight);
+
+      // Tangled Cable box / Transformer drum (Hộp điện / biến áp)
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.9, 0.4), crossBarMat);
+      box.position.set(0, 4.2, 0.25);
+      poleGroup.add(box);
+
+      this.scene.add(poleGroup);
+      this.collisionSystem.addCylinder(pos.x, pos.z, 0.6);
+    });
+
+    // String hanging electrical wires between poles
+    const wirePoints = [
+      new THREE.Vector3(-16, 8.2, 8.5),
+      new THREE.Vector3(0, 7.2, 8.5), // slight sag in middle
+      new THREE.Vector3(16, 8.2, 8.5),
+    ];
+    const curve = new THREE.CatmullRomCurve3(wirePoints);
+    const wireGeo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(20));
+    const wireLine = new THREE.Line(wireGeo, wireMat);
+    this.scene.add(wireLine);
+
+    // Cross-street wire
+    const crossWirePoints = [
+      new THREE.Vector3(-16, 8.2, 8.5),
+      new THREE.Vector3(-17, 7.5, 16),
+      new THREE.Vector3(-18, 8.2, 23),
+    ];
+    const crossCurve = new THREE.CatmullRomCurve3(crossWirePoints);
+    const crossWireLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(crossCurve.getPoints(20)), wireMat);
+    this.scene.add(crossWireLine);
+  }
+
+  // 7. Across-The-Street Storefronts & Colonial Shophouses (Dãy nhà phố bên kia đường)
+  private buildAcrossStreetBuildings() {
+    const townGroup = new THREE.Group();
+    townGroup.position.set(0, 0, 24);
+
+    const colors = [0xd6a858, 0x5b8a99, 0xcc845b, 0xa3a375, 0xd4b077];
+    const buildingWidth = 7.0;
+
+    for (let i = -3; i <= 3; i++) {
+      const bColor = colors[Math.abs(i) % colors.length];
+      const bMat = new THREE.MeshStandardMaterial({ color: bColor, roughness: 0.85 });
+
+      // 2-3 Storey Shophouse
+      const height = 9 + (Math.abs(i) % 3) * 1.5;
+      const bMesh = new THREE.Mesh(new THREE.BoxGeometry(buildingWidth - 0.4, height, 8), bMat);
+      bMesh.position.set(i * buildingWidth, height / 2, 0);
+      bMesh.castShadow = true;
+      bMesh.receiveShadow = true;
+      townGroup.add(bMesh);
+
+      // Windows with green shutters
+      const shutterMat = new THREE.MeshStandardMaterial({ color: 0x1b4332 });
+      const windowMat = new THREE.MeshStandardMaterial({ color: 0x223344, roughness: 0.1 });
+
+      [-1.8, 1.8].forEach((wx) => {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.6, 0.1), windowMat);
+        win.position.set(i * buildingWidth + wx, height * 0.65, -4.05);
+        townGroup.add(win);
+
+        const shutterL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.6, 0.08), shutterMat);
+        shutterL.position.set(i * buildingWidth + wx - 0.7, height * 0.65, -4.06);
+        townGroup.add(shutterL);
+
+        const shutterR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.6, 0.08), shutterMat);
+        shutterR.position.set(i * buildingWidth + wx + 0.7, height * 0.65, -4.06);
+        townGroup.add(shutterR);
+      });
+
+      // Ground floor shop awning
+      const awning = new THREE.Mesh(
+        new THREE.BoxGeometry(buildingWidth - 0.8, 0.15, 2.0),
+        new THREE.MeshStandardMaterial({ color: (i % 2 === 0) ? 0x9e2a2b : 0x1d3557 })
+      );
+      awning.position.set(i * buildingWidth, 3.8, -4.8);
+      awning.rotation.x = 0.2;
+      awning.castShadow = true;
+      townGroup.add(awning);
+    }
+
+    this.scene.add(townGroup);
+  }
+
+  // 8. Signboard
   private buildSignboard() {
     const signGroup = new THREE.Group();
     signGroup.position.set(0, 4.2, -4.5);
@@ -401,13 +539,13 @@ export class TeaStallBuilder {
     canvas.height = 256;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.fillStyle = '#422a15'; // Dark wood
+      ctx.fillStyle = '#422a15';
       ctx.fillRect(0, 0, 1024, 256);
-      ctx.strokeStyle = '#d4af37'; // Gold border
+      ctx.strokeStyle = '#d4af37';
       ctx.lineWidth = 12;
       ctx.strokeRect(16, 16, 992, 224);
 
-      ctx.fillStyle = '#ffd700'; // Golden yellow lettering
+      ctx.fillStyle = '#ffd700';
       ctx.font = 'bold 64px serif';
       ctx.textAlign = 'center';
       ctx.fillText('TRÀ ĐÁ THỊ TRƯỜNG', 512, 105);
@@ -428,7 +566,7 @@ export class TeaStallBuilder {
     signMesh.castShadow = true;
     signGroup.add(signMesh);
 
-    // Hanging warm lanterns on both sides of the sign
+    // Hanging lanterns
     const lanternMat = new THREE.MeshStandardMaterial({
       color: 0xff3b30,
       emissive: 0xff4500,
@@ -447,22 +585,21 @@ export class TeaStallBuilder {
     this.scene.add(signGroup);
   }
 
-  // 7. Small Blackboard with humorous market quotes
+  // 9. Blackboard
   private buildBlackboard() {
     const boardGroup = new THREE.Group();
     boardGroup.position.set(-3.8, 0, 0.5);
     boardGroup.rotation.y = 0.4;
 
-    // Blackboard canvas
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.fillStyle = '#1e241c'; // Slate chalkboard color
+      ctx.fillStyle = '#1e241c';
       ctx.fillRect(0, 0, 512, 512);
 
-      ctx.fillStyle = '#f5f5f5'; // Chalk white
+      ctx.fillStyle = '#f5f5f5';
       ctx.font = 'bold 36px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('⚡ BẢNG TIN TRADER ⚡', 256, 70);
@@ -494,7 +631,6 @@ export class TeaStallBuilder {
     board.castShadow = true;
     boardGroup.add(board);
 
-    // Wooden easel frame
     const frameMat = new THREE.MeshStandardMaterial({ color: 0x5a3d28, roughness: 0.8 });
     const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.6, 6);
     const legL = new THREE.Mesh(legGeo, frameMat);
@@ -511,12 +647,11 @@ export class TeaStallBuilder {
     this.collisionSystem.addBox(-4.6, 0.0, -3.0, 1.0);
   }
 
-  // 8. Surrounding village scenery, wooden fence & decorative shrubs
+  // 10. Surrounding village scenery
   private buildVillageSurroundings() {
     const fenceMat = new THREE.MeshStandardMaterial({ color: 0x6e5238, roughness: 0.8 });
     const bushMat = new THREE.MeshStandardMaterial({ color: 0x3d7034, roughness: 0.7, flatShading: true });
 
-    // Bamboo / wood fence along sides
     for (let i = -16; i <= 16; i += 2) {
       if (Math.abs(i) > 9) {
         const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.8, 6), fenceMat);
@@ -526,7 +661,6 @@ export class TeaStallBuilder {
       }
     }
 
-    // Shrubs & flower bushes
     const bushPositions = [
       { x: -7, z: -5, s: 1.2 },
       { x: 8, z: -5, s: 1.5 },

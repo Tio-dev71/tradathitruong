@@ -69,3 +69,4 @@ export const AdminConfigUpdateSchema = z.object({
   providerMode: z.enum(['MOCK', 'WEBHOOK']).optional(),
   maxPlayers: z.number().int().min(5).max(100).optional(),
 });
+

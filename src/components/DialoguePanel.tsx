@@ -39,7 +39,9 @@ export const DialoguePanel: React.FC = () => {
       return;
     }
 
-    if (action === 'tea_order') {
+    if (action === 'thay_do_signal') {
+      soundEngine.playXocDiaShake();
+    } else if (action === 'tea_order') {
       soundEngine.playPourTea();
       soundEngine.playCupClink();
     }
@@ -47,20 +49,24 @@ export const DialoguePanel: React.FC = () => {
     multiplayerService.interactNpc(action as any);
   };
 
+  const isThayDo = dialogue.speaker === 'Thầy Đồ Xóc Đĩa';
+
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-3xl px-4 pointer-events-auto">
-      <div className="relative bg-gradient-to-b from-[#2a1c12]/95 to-[#160d08]/95 border-2 border-amber-600/80 rounded-3xl p-5 sm:p-6 shadow-[0_10px_35px_rgba(0,0,0,0.8)] backdrop-blur-md text-amber-100">
+      <div className={`relative bg-gradient-to-b ${isThayDo ? 'from-[#23172e]/95 to-[#120a1c]/95 border-purple-500/80' : 'from-[#2a1c12]/95 to-[#160d08]/95 border-amber-600/80'} border-2 rounded-3xl p-5 sm:p-6 shadow-[0_10px_35px_rgba(0,0,0,0.8)] backdrop-blur-md text-amber-100`}>
         {/* Top Header: NPC Persona Badge */}
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-amber-900/60">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-amber-700 to-amber-500 border border-amber-300 flex items-center justify-center text-xl shadow">
-              👵
+            <div className={`w-11 h-11 rounded-full ${isThayDo ? 'bg-gradient-to-tr from-purple-800 to-red-600 border-red-300' : 'bg-gradient-to-tr from-amber-700 to-amber-500 border-amber-300'} border flex items-center justify-center text-xl shadow`}>
+              {isThayDo ? '🎲' : '👵'}
             </div>
             <div>
-              <h2 className="font-bold text-lg text-amber-300 leading-tight">
-                TRÀ ĐÁ THỊ TRƯỜNG
+              <h2 className={`font-bold text-lg leading-tight ${isThayDo ? 'text-purple-300' : 'text-amber-300'}`}>
+                {isThayDo ? 'THẦY ĐỒ XÓC ĐĨA' : 'TRÀ ĐÁ THỊ TRƯỜNG'}
               </h2>
-              <p className="text-xs text-amber-200/70">Chuyên gia soi nến vỉa hè • Kinh nghiệm 20 năm cắt lỗ</p>
+              <p className="text-xs text-amber-200/70">
+                {isThayDo ? 'Xóc đĩa tâm linh • Soi quẻ nến tỷ lệ 60/40' : 'Chuyên gia soi nến vỉa hè • Kinh nghiệm 20 năm cắt lỗ'}
+              </p>
             </div>
           </div>
 
@@ -117,3 +123,4 @@ export const DialoguePanel: React.FC = () => {
     </div>
   );
 };
+

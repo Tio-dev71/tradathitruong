@@ -47,3 +47,4 @@ export interface GameSettings {
   sfxVolume: number;
   viewMode: 'third-person' | 'first-person' | 'top-down';
 }
+

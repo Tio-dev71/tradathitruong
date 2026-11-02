@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { CollisionSystem } from './CollisionSystem';
-import { TeaStallBuilder } from './TeaStallBuilder';
+import { TeaStallBuilder, type StoolSpot } from './TeaStallBuilder';
 import { buildTeaVendorNPC, type TeaVendorRig } from '../npc/TeaVendorNPC';
+import { buildThayDoNPC, type ThayDoRig } from '../npc/ThayDoNPC';
+import { TrafficSystem } from './TrafficSystem';
 import { buildChibiAvatar, type AvatarRig } from '../player/AvatarBuilder';
 import type { PlayerData, PlayerRole } from '../types/game';
 
@@ -17,7 +19,10 @@ export class WorldScene {
   public camera: THREE.PerspectiveCamera;
   public renderer: THREE.WebGLRenderer;
   public collisionSystem: CollisionSystem;
+  public stallBuilder: TeaStallBuilder;
   public npc: TeaVendorRig;
+  public thayDo: ThayDoRig;
+  public trafficSystem: TrafficSystem;
 
   private container: HTMLElement;
   private animFrameId: number | null = null;
@@ -61,16 +66,23 @@ export class WorldScene {
 
     // 5. Collision System & Tea Stall Environment
     this.collisionSystem = new CollisionSystem();
-    const stallBuilder = new TeaStallBuilder(this.scene, this.collisionSystem);
-    stallBuilder.buildAll();
+    this.stallBuilder = new TeaStallBuilder(this.scene, this.collisionSystem);
+    this.stallBuilder.buildAll();
 
     // 6. NPC: Trà Đá Thị Trường
     this.npc = buildTeaVendorNPC();
     this.scene.add(this.npc.group);
-    // Add NPC collision box
     this.collisionSystem.addCylinder(-1.8, -1.2, 0.8);
 
-    // 7. Ambient particles (Fireflies & Autumn leaves)
+    // 7. NPC: Thầy Đồ Xóc Đĩa
+    this.thayDo = buildThayDoNPC();
+    this.scene.add(this.thayDo.group);
+    this.collisionSystem.addCylinder(4.2, 1.8, 0.9);
+
+    // 8. Street Traffic System (Motorbikes & Cars)
+    this.trafficSystem = new TrafficSystem(this.scene);
+
+    // 9. Ambient particles (Fireflies & Autumn leaves)
     this.setupParticles();
 
     // 8. Event listeners
@@ -242,7 +254,10 @@ export class WorldScene {
       );
     });
 
-    // 3. Animate particles
+    // 3. Update Street Traffic (Motorbikes & Cars)
+    this.trafficSystem.update(delta);
+
+    // 4. Animate particles
     if (this.dustPoints) {
       const posAttr = this.dustPoints.geometry.getAttribute('position') as THREE.BufferAttribute;
       for (let i = 0; i < posAttr.count; i++) {
@@ -283,6 +298,7 @@ export class WorldScene {
       cancelAnimationFrame(this.animFrameId);
     }
     window.removeEventListener('resize', this.onWindowResize);
+    this.trafficSystem.dispose();
     this.clearAllRemotePlayers();
     this.renderer.dispose();
     if (this.renderer.domElement.parentElement) {
@@ -290,3 +306,4 @@ export class WorldScene {
     }
   }
 }
+

@@ -189,3 +189,4 @@ interface SignalData {
    - Bật shadow maps vừa phải (PCFSoftShadowMap, 1024x1024).
    - Giới hạn Pixel Ratio trên thiết bị di động (`Math.min(window.devicePixelRatio, 2)`).
    - Dọn dẹp tài nguyên (`dispose`) khi unmount scene.
+

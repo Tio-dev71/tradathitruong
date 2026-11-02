@@ -33,6 +33,40 @@ export const NPC_REJECT_QUOTES: string[] = [
   'Cô soi rồi mà thấy thần may mắn hôm nay đi vắng, tốt nhất ngồi yên giữ tiền.',
 ];
 
+// Thầy Đồ Xóc Đĩa (Tỷ Lệ 60/40) Quotes
+export const THAY_DO_ACCEPT_QUOTES: string[] = [
+  'Cạch cạch cạch... Mở bát: Ba trắng một đỏ, nến xanh ngút ngàn! Thầy thấy tiền tài đang réo gọi con, đây là quẻ kèo thầy ban!',
+  'Bát mở: Tứ tử trắng tinh! Điềm báo breakout chuẩn chỉ, thầy ban cho con quẻ lệnh này, nhớ chốt lời đúng hạn.',
+  'Cạch cạch... Quẻ này rơi đúng cung Tài Bạch! Thầy soi thấy tay to đang gom hàng, con lướt nhẹ theo sóng thôi nhé!',
+  'Bát này mở ra Lẻ đẹp như tranh vẽ! Con có duyên với thầy hôm nay rồi, quẻ tín hiệu đây, nhớ cài SL kẻo tổ nghề không đỡ nổi.',
+  'Thần may mắn vừa ghé vào chiếu xóc đĩa của thầy! Thầy cho con một quẻ nến đảo chiều, đánh khéo thì có tiền khao trà đá cả làng.',
+  'Mở bát: Chẵn mười mươi! Lực mua đang vào cuồn cuộn như thác đổ, quẻ kèo nằm trọn trong tay con.',
+];
+
+export const THAY_DO_REJECT_QUOTES: string[] = [
+  'Cạch cạch... Bát mở: Tứ tử đen sì! Quẻ này phạm đại kỵ, con vào lệnh lúc này là bay sạch sổ đỏ, về ăn cơm mẹ nấu đi con!',
+  'Thầy bấm quẻ thấy hôm nay sao Kế Đô chiếu thẳng ví tiền của con, tốt nhất ngồi im niệm chú cắt lỗ!',
+  'Bát này thầy thấy khói bốc nghi ngút, điềm báo cháy tài khoản mười mươi! Không có kèo đâu, ăn đĩa lạc luộc đi con!',
+  'Thầy xóc ra quẻ: "Án binh bất động". Thị trường này cá mập đang rình mồi, con chui vào chỉ làm mồi cho cá!',
+  'Quẻ hôm nay đen như nước điếu cày! Thầy mà cho kèo là hại con, ngồi uống chén trà cho tâm tịnh lại đã.',
+  'Thầy vừa gieo thấy thần may mắn đang bận đu đỉnh bên sàn khác rồi, hôm nay giữ vốn là đại thắng!',
+];
+
+export const THAY_DO_DIALOGUES: Record<string, string[]> = {
+  chan_le: [
+    'Bát úp kín mít! Đố con biết bên trong Chẵn hay Lẻ, Long hay Short? Thầy lắc một cái là tài khoản nhảy múa!',
+    'Xóc đĩa hay trader cũng từ một chữ "Duyên" và "Kỷ Luật" mà ra. Đừng tham bát bỏ mâm con nhé!',
+    'Tiếng bát va đĩa giòn tan như tiếng khớp lệnh chốt lời, nhưng mở ra không đúng là về bờ xa lắc!',
+    'Cạch cạch cạch! Bát này thầy xóc bằng tâm linh, kết hợp phân tích kỹ thuật Fibonacci đa khung thời gian đấy!',
+  ],
+  van_han: [
+    'Nhìn tướng mạo con trán cao mắt sáng, nhưng dạo này hay gồng lỗ đêm muộn đúng không? Thầy bấm quẻ thấy hết!',
+    'Năm nay hạn của con là hạn FOMO, thấy nến xanh dài ngoằng là tay chân ngứa ngáy muốn đu đỉnh. Cẩn thận nghe thầy!',
+    'Vận may không tự sinh ra và không tự mất đi, nó chỉ chuyển từ túi thằng FOMO sang túi thằng kiên nhẫn!',
+    'Con muốn giải hạn đu đỉnh thì đơn giản lắm: Đặt Stop Loss ngay khi vừa vào lệnh, thần tài tự khắc mỉm cười!',
+  ],
+};
+
 export const GENERAL_DIALOGUES: Record<string, string[]> = {
   market_status: [
     'Hôm nay thị trường đỏ lửa như ấm nước sôi của cô, các chiến thần đu đỉnh đang xếp hàng ngoài kia kìa.',
@@ -110,6 +144,23 @@ export class DialogueService {
   public getSignalRejectQuote(): string {
     return this.getRandomLine(NPC_REJECT_QUOTES);
   }
+
+  public getThayDoAcceptQuote(): string {
+    return this.getRandomLine(THAY_DO_ACCEPT_QUOTES);
+  }
+
+  public getThayDoRejectQuote(): string {
+    return this.getRandomLine(THAY_DO_REJECT_QUOTES);
+  }
+
+  public getThayDoChanLe(): string {
+    return this.getRandomLine(THAY_DO_DIALOGUES.chan_le);
+  }
+
+  public getThayDoVanHan(): string {
+    return this.getRandomLine(THAY_DO_DIALOGUES.van_han);
+  }
 }
 
 export const dialogueService = new DialogueService();
+

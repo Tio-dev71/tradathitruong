@@ -100,3 +100,4 @@ export const MobileControls: React.FC<Props> = ({ onJoystickMove, onInteract, on
     </div>
   );
 };
+

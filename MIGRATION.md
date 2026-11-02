@@ -79,3 +79,4 @@ Tài liệu này đánh giá hiện trạng source code của repository gốc *
 - Hỗ trợ đầy đủ Desktop & Mobile (Virtual Joystick).
 - Viết bài kiểm thử tự động (Unit test với Vitest cho 80/20, Cooldown, Dialogue, Webhook HMAC).
 - Hoàn thiện tài liệu README.md và hướng dẫn tích hợp Webhook.
+

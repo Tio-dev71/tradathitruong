@@ -125,3 +125,4 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
     </div>
   );
 };
+

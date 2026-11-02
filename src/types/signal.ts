@@ -60,3 +60,4 @@ export interface AdminStats {
   signals: SignalData[];
   webhookLogs: { eventId: string; status: 'SUCCESS' | 'ERROR'; reason?: string; timestamp: number }[];
 }
+

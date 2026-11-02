@@ -59,4 +59,24 @@ describe('SignalDecisionService & 80/20 Logic', () => {
     expect(empiricalRatio).toBeGreaterThan(0.70);
     expect(empiricalRatio).toBeLessThan(0.90);
   });
+
+  it('statistically converges near 60% for Thầy Đồ Xóc Đĩa', async () => {
+    let acceptedCount = 0;
+    const trials = 400;
+
+    for (let i = 0; i < trials; i++) {
+      const pid = `stat_thaydo_${i}`;
+      signalDecisionService.resetCooldown(pid + '_thaydo');
+      const res = await signalDecisionService.requestThayDoSignal(pid, 'Thợ Săn Kèo');
+      if (res.allowed) {
+        acceptedCount++;
+      }
+    }
+
+    const empiricalRatio = acceptedCount / trials;
+    // For 400 samples with p=0.6, standard deviation is ~0.024.
+    expect(empiricalRatio).toBeGreaterThan(0.52);
+    expect(empiricalRatio).toBeLessThan(0.68);
+  });
 });
+

@@ -8,6 +8,8 @@ export class PlayerController {
   public isMoving = false;
   public isRunning = false;
   public isSitting = false;
+  public currentEmote?: string;
+  private emoteTimer = 0;
 
   private walkSpeed = 4.2;
   private runSpeed = 7.8;
@@ -149,12 +151,20 @@ export class PlayerController {
       this.rotationY += angleDiff * Math.min(1.0, delta * 12);
     }
 
+    // Handle Emote timer
+    if (this.emoteTimer > 0) {
+      this.emoteTimer -= delta;
+      if (this.emoteTimer <= 0) {
+        this.currentEmote = undefined;
+      }
+    }
+
     // 2. Update avatar position and orientation
     if (avatarRig) {
       avatarRig.root.position.x = this.position.x;
       avatarRig.root.position.z = this.position.z;
       avatarRig.root.rotation.y = this.rotationY;
-      avatarRig.updateAnimation(performance.now() / 1000, this.isMoving, this.isRunning, this.isSitting);
+      avatarRig.updateAnimation(performance.now() / 1000, this.isMoving, this.isRunning, this.isSitting, this.currentEmote);
     }
 
     // 3. Update third-person camera position
@@ -173,11 +183,19 @@ export class PlayerController {
     this.camera.lookAt(this.position.x, this.position.y + 1.2, this.position.z);
   }
 
-  public setSitting(sitting: boolean, seatPos?: { x: number; y: number; z: number }) {
+  public playEmote(emote: string) {
+    this.currentEmote = emote;
+    this.emoteTimer = 3.5;
+  }
+
+  public setSitting(sitting: boolean, seatPos?: { x: number; y: number; z: number }, facingY?: number) {
     this.isSitting = sitting;
     if (sitting && seatPos) {
       this.position.x = seatPos.x;
       this.position.z = seatPos.z;
+      if (facingY !== undefined) {
+        this.rotationY = facingY;
+      }
     }
   }
 }

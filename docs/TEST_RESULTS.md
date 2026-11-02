@@ -73,3 +73,4 @@ Duration    414ms
   - Client 2 di chuyển: Vị trí được đồng bộ realtime tới Client 1 với nội suy Lerp mượt mà.
   - Client 2 xin kèo: Server phản hồi quyết định 80/20 và phát bubble thoại của Bà Bán Trà.
   - Chat giữa 2 client được phát tán tức thời qua phòng chat và bong bóng trên đầu nhân vật.
+

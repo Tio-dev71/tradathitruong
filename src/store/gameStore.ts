@@ -49,7 +49,7 @@ interface GameState {
   addChatMessage: (msg: ChatMessage) => void;
   setActiveSignal: (signal: SignalData | null) => void;
   setCooldown: (remaining: number, nextAllowedAt: number) => void;
-  openDialogue: (text: string, options?: DialogueOption[]) => void;
+  openDialogue: (text: string, options?: DialogueOption[], speaker?: string) => void;
   closeDialogue: () => void;
   setDialogueText: (text: string, isTyping?: boolean) => void;
   setIsAdminOpen: (open: boolean) => void;
@@ -101,11 +101,11 @@ export const useGameStore = create<GameState>((set) => ({
   setActiveSignal: (activeSignal) => set({ activeSignal }),
   setCooldown: (cooldownRemaining, nextAllowedAt) => set({ cooldownRemaining, nextAllowedAt }),
 
-  openDialogue: (text, options) =>
+  openDialogue: (text, options, speaker = 'Bà Bán Trà') =>
     set({
       dialogue: {
         isOpen: true,
-        speaker: 'Bà Bán Trà',
+        speaker,
         text,
         options: options || [
           { id: '1', label: 'Cô ơi, cho cháu xin một kèo!', action: 'signal_request' },
@@ -137,3 +137,4 @@ export const useGameStore = create<GameState>((set) => ({
       settings: { ...state.settings, soundEnabled: !state.settings.soundEnabled },
     })),
 }));
+

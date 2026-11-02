@@ -48,3 +48,4 @@ describe('DialogueEngine & Vietnamese Quotes', () => {
     expect(rejectQuote.length).toBeGreaterThan(5);
   });
 });
+

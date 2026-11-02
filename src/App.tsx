@@ -84,12 +84,24 @@ export function App() {
       // Check distance to NPC "Trà Đá Thị Trường" at (-1.8, 0, -1.2)
       const npcPos = new THREE.Vector3(-1.8, 0, -1.2);
       const distToNpc = ctrl.position.distanceTo(npcPos);
-      const inRange = distToNpc < 2.8;
-      setCanInteractNpc(inRange);
-      scene.npc.setInteractPromptVisible(inRange);
-
-      // Animate NPC
+      const inRangeNpc = distToNpc < 2.8;
+      scene.npc.setInteractPromptVisible(inRangeNpc);
       scene.npc.update(performance.now() / 1000, ctrl.position, false);
+
+      // Check distance to NPC "Thầy Đồ Xóc Đĩa" at (4.2, 0, 1.8)
+      const thayDoPos = new THREE.Vector3(4.2, 0, 1.8);
+      const distToThayDo = ctrl.position.distanceTo(thayDoPos);
+      const inRangeThayDo = distToThayDo < 2.8;
+      scene.thayDo.setInteractPromptVisible(inRangeThayDo);
+      scene.thayDo.update(performance.now() / 1000, ctrl.position, false);
+
+      setCanInteractNpc(inRangeNpc || inRangeThayDo);
+
+      // If player moved while sitting, automatically stand up
+      if (isSitting && !ctrl.isSitting) {
+        setIsSitting(false);
+        multiplayerService.sendSit(false);
+      }
     };
 
     // Check saved session in localStorage
@@ -124,24 +136,54 @@ export function App() {
     return () => clearInterval(timer);
   }, []);
 
-  // 3. Trigger interaction with NPC
+  // 3. Trigger interaction with NPC (Bà Bán Trà or Thầy Đồ Xóc Đĩa)
   const handleInteractTrigger = useCallback(() => {
     if (!playerControllerRef.current || !worldSceneRef.current) return;
 
-    const npcPos = new THREE.Vector3(-1.8, 0, -1.2);
-    const distToNpc = playerControllerRef.current.position.distanceTo(npcPos);
+    const ctrl = playerControllerRef.current;
+    const { player } = useGameStore.getState();
+    const roleText = player ? player.role : 'Chiến thần';
+    const nameText = player ? player.nickname : 'bạn';
 
-    if (distToNpc < 2.8) {
+    // 1. Check Bà Bán Trà
+    const npcPos = new THREE.Vector3(-1.8, 0, -1.2);
+    if (ctrl.position.distanceTo(npcPos) < 2.8) {
       soundEngine.playUiClick();
       soundEngine.playCupClink();
 
-      const { player } = useGameStore.getState();
-      const roleText = player ? player.role : 'Chiến thần';
-      const nameText = player ? player.nickname : 'bạn';
+      openDialogue(
+        `Ơ kìa ${roleText} ${nameText}! Ghé quán cô làm chén trà đá giải nhiệt hay muốn cô soi kèo thị trường nào?`,
+        [
+          { id: '1', label: 'Cô ơi, cho cháu xin một kèo! (Tỷ lệ 80/20)', action: 'signal_request' },
+          { id: '2', label: 'Hôm nay thị trường thế nào cô?', action: 'market_status' },
+          { id: '3', label: 'Cho cháu cốc trà đá.', action: 'tea_order' },
+          { id: '4', label: 'Cô kể chuyện trader đi!', action: 'stories' },
+          { id: '5', label: 'Cháu ngồi hóng thôi.', action: 'sitting_chill' },
+          { id: '6', label: 'Tạm biệt cô!', action: 'close' },
+        ],
+        'Bà Bán Trà'
+      );
+      return;
+    }
+
+    // 2. Check Thầy Đồ Xóc Đĩa
+    const thayDoPos = new THREE.Vector3(4.2, 0, 1.8);
+    if (ctrl.position.distanceTo(thayDoPos) < 2.8) {
+      soundEngine.playUiClick();
+      soundEngine.playXocDiaShake();
 
       openDialogue(
-        `Ơ kìa ${roleText} ${nameText}! Ghé quán cô làm chén trà đá giải nhiệt hay muốn cô soi kèo thị trường nào?`
+        `A di đà Phật... à nhầm, quẻ này thầy xóc ra vận tiền tài đấy ${roleText} ${nameText}! Vào đây làm một ván hay xin quẻ thị trường?`,
+        [
+          { id: 't1', label: 'Thầy ơi, xóc cho con một quẻ kèo! (Tỷ lệ 60/40)', action: 'thay_do_signal' as any },
+          { id: 't2', label: 'Bát này mở ra Chẵn hay Lẻ hả thầy?', action: 'thay_do_chan_le' as any },
+          { id: 't3', label: 'Xem cho con vận hạn đu đỉnh năm nay.', action: 'thay_do_van_han' as any },
+          { id: 't4', label: 'Con ngồi xem thầy xóc đĩa thôi.', action: 'sitting_chill' as any },
+          { id: 't5', label: 'Tạm biệt thầy!', action: 'close' as any },
+        ],
+        'Thầy Đồ Xóc Đĩa'
       );
+      return;
     }
   }, [openDialogue]);
 
@@ -194,8 +236,18 @@ export function App() {
     setPlayer(pData);
     setIsCreateModalOpen(false);
 
-    // Start background sounds
-    soundEngine.startAmbience();
+    // Start background sounds with lively street events
+    soundEngine.startAmbience((streetText) => {
+      addChatMessage({
+        id: 'street_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
+        playerId: 'street',
+        nickname: 'Phố Xá',
+        role: 'Ông Chú Ngồi Hóng',
+        text: streetText,
+        timestamp: Date.now(),
+        isSystem: true,
+      });
+    });
 
     // Connect to Multiplayer Socket.IO
     multiplayerService.connect(
@@ -241,16 +293,21 @@ export function App() {
 
           if (result.allowed && result.signal) {
             setActiveSignal(result.signal);
-            setDialogueText(`[ĐỒNG Ý SOI KÈO] ${result.npcQuote}`);
+            setDialogueText(`[ĐỒNG Ý CẤP TÍN HIỆU] ${result.npcQuote}`);
           } else {
             setDialogueText(`[TỪ CHỐI] ${result.npcQuote}`);
           }
         },
         onNpcSpeech: (data) => {
-          // Show speech bubble above bà cô bán trà in 3D
           world.npc.showSpeech(data.text);
           setTimeout(() => {
             world.npc.hideSpeech();
+          }, 8000);
+        },
+        onThayDoSpeech: (data) => {
+          world.thayDo.showSpeech(data.text);
+          setTimeout(() => {
+            world.thayDo.hideSpeech();
           }, 8000);
         },
         onNpcDialogueReply: (data) => {
@@ -266,23 +323,40 @@ export function App() {
     );
   };
 
-  // Toggle Sit / Stand
+  // Toggle Sit / Stand with clean snap to nearest stool
   const handleToggleSit = () => {
     soundEngine.playUiClick();
     const nextSitting = !isSitting;
     setIsSitting(nextSitting);
 
-    if (playerControllerRef.current) {
-      // If sitting down, sit on the stool near table
-      playerControllerRef.current.setSitting(
-        nextSitting,
-        nextSitting ? { x: -1.2, y: 0, z: 0.2 } : undefined
-      );
-      multiplayerService.sendSit(
-        nextSitting,
-        nextSitting ? { x: -1.2, y: 0, z: 0.2 } : undefined
-      );
+    if (playerControllerRef.current && worldSceneRef.current) {
+      if (nextSitting) {
+        const spots = worldSceneRef.current.stallBuilder.stoolSpots;
+        const currentPos = playerControllerRef.current.position;
+        let closest = spots[0];
+        let minDist = 99999;
+        for (const s of spots) {
+          const d = Math.hypot(s.x - currentPos.x, s.z - currentPos.z);
+          if (d < minDist) {
+            minDist = d;
+            closest = s;
+          }
+        }
+        playerControllerRef.current.setSitting(true, { x: closest.x, y: 0, z: closest.z }, closest.facingY);
+        multiplayerService.sendSit(true, { x: closest.x, y: 0, z: closest.z });
+      } else {
+        playerControllerRef.current.setSitting(false);
+        multiplayerService.sendSit(false);
+      }
     }
+  };
+
+  // Local emote triggering
+  const handleTriggerEmote = (emote: 'wave' | 'laugh' | 'sip_tea' | 'shrug' | 'cheer') => {
+    if (playerControllerRef.current) {
+      playerControllerRef.current.playEmote(emote);
+    }
+    multiplayerService.sendEmote(emote);
   };
 
   return (
@@ -301,7 +375,7 @@ export function App() {
       {!isCreateModalOpen && (
         <>
           <HUD onToggleSit={handleToggleSit} isSitting={isSitting} />
-          <ChatBox />
+          <ChatBox onEmote={handleTriggerEmote} />
           <DialoguePanel />
           <SignalCard />
           <MobileControls

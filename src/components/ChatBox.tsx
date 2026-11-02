@@ -3,7 +3,11 @@ import { useGameStore } from '../store/gameStore';
 import { multiplayerService } from '../services/multiplayerService';
 import { soundEngine } from '../services/soundEngine';
 
-export const ChatBox: React.FC = () => {
+interface Props {
+  onEmote?: (emote: 'wave' | 'laugh' | 'sip_tea' | 'shrug' | 'cheer') => void;
+}
+
+export const ChatBox: React.FC<Props> = ({ onEmote }) => {
   const { chatMessages } = useGameStore();
   const [inputText, setInputText] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
@@ -29,6 +33,7 @@ export const ChatBox: React.FC = () => {
     if (emote === 'sip_tea') {
       soundEngine.playCupClink();
     }
+    onEmote?.(emote);
     multiplayerService.sendEmote(emote);
   };
 
@@ -142,3 +147,4 @@ export const ChatBox: React.FC = () => {
     </div>
   );
 };
+

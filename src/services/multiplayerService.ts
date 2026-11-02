@@ -19,6 +19,7 @@ export interface MultiplayerCallbacks {
   onChatMessage: (message: ChatMessage) => void;
   onSignalResponse: (result: SignalDecisionResult) => void;
   onNpcSpeech: (data: { speaker: string; text: string; allowed: boolean; targetNickname: string }) => void;
+  onThayDoSpeech?: (data: { speaker: string; text: string; allowed: boolean; targetNickname: string }) => void;
   onNpcDialogueReply: (data: { speaker: string; text: string; action: string }) => void;
   onOnlineCount: (count: number) => void;
   onErrorJoin: (data: { message: string }) => void;
@@ -83,6 +84,10 @@ export class MultiplayerService {
 
     this.socket.on('npc:speech', (data) => {
       this.callbacks.onNpcSpeech?.(data);
+    });
+
+    this.socket.on('thay_do:speech', (data) => {
+      this.callbacks.onThayDoSpeech?.(data);
     });
 
     this.socket.on('npc:dialogue_reply', (data) => {
@@ -152,3 +157,4 @@ export class MultiplayerService {
 }
 
 export const multiplayerService = new MultiplayerService();
+

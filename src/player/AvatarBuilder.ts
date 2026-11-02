@@ -241,32 +241,76 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
   // --- Animation Update Method ---
   const updateAnimation = (time: number, isMoving: boolean, isRunning: boolean, isSitting: boolean, emote?: string) => {
     if (isSitting) {
-      // Sitting posture: lower body, fold legs forward
-      root.position.y = -0.25;
-      leftLeg.rotation.x = -Math.PI / 2;
-      rightLeg.rotation.x = -Math.PI / 2;
-      leftArm.rotation.x = -0.4;
-      rightArm.rotation.x = -0.4;
+      // Clean sitting posture aligned on top of stool
+      root.position.y = 0.02;
+      leftLeg.rotation.x = -Math.PI / 2.4;
+      rightLeg.rotation.x = -Math.PI / 2.4;
+      leftArm.rotation.x = 0.45;
+      leftArm.rotation.z = 0.15;
+      rightArm.rotation.x = 0.45;
+      rightArm.rotation.z = -0.15;
+      headGroup.position.y = 1.05 + Math.sin(time * 2) * 0.015;
       headGroup.rotation.y = Math.sin(time * 0.8) * 0.08;
+      bodyMesh.rotation.x = 0.04;
       return;
     }
 
     root.position.y = 0;
 
+    // Emote Animations
     if (emote === 'wave') {
       rightArm.rotation.x = Math.PI * 0.85;
-      rightArm.rotation.z = Math.sin(time * 12) * 0.4;
+      rightArm.rotation.z = Math.sin(time * 12) * 0.45;
       leftArm.rotation.x = 0;
-      leftArm.rotation.z = 0;
-      headGroup.rotation.y = Math.sin(time * 4) * 0.15;
+      leftArm.rotation.z = 0.1;
+      headGroup.rotation.y = Math.sin(time * 4) * 0.2;
+      leftLeg.rotation.x = 0;
+      rightLeg.rotation.x = 0;
       return;
     }
 
     if (emote === 'laugh') {
-      headGroup.rotation.x = -0.2 + Math.sin(time * 16) * 0.15;
-      bodyMesh.scale.y = 1 + Math.sin(time * 16) * 0.08;
-      leftArm.rotation.z = 0.3 + Math.sin(time * 16) * 0.1;
-      rightArm.rotation.z = -0.3 - Math.sin(time * 16) * 0.1;
+      headGroup.rotation.x = -0.25 + Math.sin(time * 18) * 0.2;
+      bodyMesh.scale.y = 1 + Math.sin(time * 18) * 0.1;
+      leftArm.rotation.x = 0.4;
+      leftArm.rotation.z = 0.4 + Math.sin(time * 18) * 0.15;
+      rightArm.rotation.x = 0.4;
+      rightArm.rotation.z = -0.4 - Math.sin(time * 18) * 0.15;
+      leftLeg.rotation.x = 0;
+      rightLeg.rotation.x = 0;
+      return;
+    }
+
+    if (emote === 'sip_tea') {
+      rightArm.rotation.x = 1.2 + Math.sin(time * 3) * 0.1;
+      rightArm.rotation.z = -0.3;
+      leftArm.rotation.x = 0.2;
+      leftArm.rotation.z = 0.2;
+      headGroup.rotation.x = 0.15 + Math.sin(time * 3) * 0.05;
+      leftLeg.rotation.x = 0;
+      rightLeg.rotation.x = 0;
+      return;
+    }
+
+    if (emote === 'shrug') {
+      headGroup.rotation.z = 0.25;
+      leftArm.rotation.z = 0.75;
+      rightArm.rotation.z = -0.75;
+      leftArm.rotation.x = 0.3;
+      rightArm.rotation.x = 0.3;
+      leftLeg.rotation.x = 0;
+      rightLeg.rotation.x = 0;
+      return;
+    }
+
+    if (emote === 'cheer') {
+      leftArm.rotation.x = Math.PI * 0.88;
+      rightArm.rotation.x = Math.PI * 0.88;
+      leftArm.rotation.z = 0.3 + Math.sin(time * 10) * 0.15;
+      rightArm.rotation.z = -0.3 - Math.sin(time * 10) * 0.15;
+      headGroup.position.y = 1.05 + Math.abs(Math.sin(time * 8)) * 0.08;
+      leftLeg.rotation.x = 0;
+      rightLeg.rotation.x = 0;
       return;
     }
 
@@ -317,3 +361,4 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
     updateNametag,
   };
 }
+

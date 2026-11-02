@@ -178,19 +178,148 @@ class SoundEngine {
     osc.stop(now + 0.15);
   }
 
-  public startAmbience() {
+  // Realistic Dog Bark SFX ("Gâu! Gâu!")
+  public playDogBark() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+
+    const barks = [0, 0.22];
+    barks.forEach((delay) => {
+      const now = this.ctx!.currentTime + delay;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      const filter = this.ctx!.createBiquadFilter();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(450, now);
+      osc.frequency.exponentialRampToValueAtTime(140, now + 0.14);
+
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(650, now);
+      filter.Q.setValueAtTime(2.5, now);
+
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(now);
+      osc.stop(now + 0.16);
+    });
+  }
+
+  // Vehicle Horn ("Bíp bíp!")
+  public playCarHorn() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+
+    const now = this.ctx.currentTime;
+    [440, 554].forEach((freq) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.setValueAtTime(0.18, now + 0.12);
+      gain.gain.setValueAtTime(0.0, now + 0.15);
+      gain.gain.setValueAtTime(0.18, now + 0.18);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+
+      osc.start(now);
+      osc.stop(now + 0.35);
+    });
+  }
+
+  // Xóc Đĩa Clatter SFX (Tiếng bát xóc đĩa "Cạch cạch cạch!")
+  public playXocDiaShake() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+
+    const now = this.ctx.currentTime;
+    for (let i = 0; i < 7; i++) {
+      const t = now + i * 0.06;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1800 + Math.random() * 800, t);
+      osc.frequency.exponentialRampToValueAtTime(800, t + 0.04);
+
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(t);
+      osc.stop(t + 0.05);
+    }
+  }
+
+  // Funny Vietnamese Street Banter Callouts (Tiếng chửi / quát nhau vui tai)
+  public playStreetBanter(): string {
+    const BANTER_PHRASES = [
+      'Này này, có dắt cái xe máy gọn vào vỉa hè không thì bảo?!',
+      'Bán buôn kiểu gì đấy, chắn hết lối người ta đi chợ!',
+      'Ê ê! Đi đứng kiểu gì đấy, mắt để dưới gót chân à?!',
+      'Đua xe à thằng ôn con kia, vỉa hè chứ có phải đường đua F1 đâu!',
+      'Thôi thôi các bác bớt mồm đi, ngồi xuống làm chén trà đá cho hạ hỏa!',
+      'Bát này Chẵn nhé các bác! Ai Lẻ thì bước sang một bên kẻo mất tiền!',
+      'Gâu gâu! (Tiếng chó mực bên hiên nhà sủa theo)',
+    ];
+
+    const phrase = BANTER_PHRASES[Math.floor(Math.random() * BANTER_PHRASES.length)];
+
+    // If browser supports SpeechSynthesis, speak it in Vietnamese
+    if ('speechSynthesis' in window && !this.isMuted) {
+      try {
+        const u = new SpeechSynthesisUtterance(phrase);
+        u.lang = 'vi-VN';
+        u.rate = 1.15;
+        u.pitch = 1.1;
+        u.volume = 0.45;
+        window.speechSynthesis.speak(u);
+      } catch {
+        // speech synthesis fallback
+      }
+    }
+
+    return phrase;
+  }
+
+  public startAmbience(onStreetEvent?: (text: string) => void) {
     if (this.isAmbientRunning) return;
     this.isAmbientRunning = true;
     this.initContext();
 
-    // Periodically play gentle sparrow chirps
+    // Periodically play gentle sparrow chirps and occasional street banter / dog bark
     const loop = () => {
       if (!this.isAmbientRunning) return;
-      this.playBirdChirp();
-      if (Math.random() > 0.5) {
-        setTimeout(() => this.playBirdChirp(), 140);
+
+      const rand = Math.random();
+      if (rand < 0.6) {
+        this.playBirdChirp();
+      } else if (rand < 0.8) {
+        this.playDogBark();
+        onStreetEvent?.('🐕 Chó Mực: Gâu! Gâu gâu!');
+      } else if (rand < 0.92) {
+        this.playCarHorn();
+      } else {
+        const shout = this.playStreetBanter();
+        onStreetEvent?.(`🗣️ Phố Xá: "${shout}"`);
       }
-      const nextDelay = 3000 + Math.random() * 6000;
+
+      const nextDelay = 3500 + Math.random() * 5000;
       this.ambientTimer = window.setTimeout(loop, nextDelay);
     };
 
