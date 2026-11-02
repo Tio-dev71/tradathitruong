@@ -47,6 +47,13 @@ Giữ cửa sổ `BAT-LIVE.bat` mở suốt buổi live; đóng nó là tắt ap
 
 Nếu đã clone bằng git: chạy `git pull` trong thư mục rồi mở lại `BAT-LIVE.bat`. Nếu tải ZIP: tải lại ZIP, rồi chép file `settings.json` và thư mục `uploads` từ thư mục cũ sang thư mục mới để giữ tên kênh, từ khóa, tên bảng và ảnh nền.
 
+## Sửa lỗi thường gặp
+
+- **Không vào được `localhost:3000`.** Xem cửa sổ `BAT-LIVE.bat`: phải có dòng `Chùa Online LIVE server running on http://localhost:3000`. Nếu báo lỗi cài thư viện, xóa thư mục `node_modules` rồi chạy lại BAT để nó cài lại từ đầu. Nếu báo chưa có Node.js, cài Node.js bản LTS.
+- **Trình duyệt vào được nhưng thử `localhost` không ra:** mở `http://127.0.0.1:3000` thay thế.
+- **LIVE Studio không hiện gì với link `lvh.me`:** một số mạng hoặc phần mềm diệt virus chặn tên miền này. Mở Notepad bằng quyền Administrator, mở file `C:\Windows\System32\drivers\etc\hosts`, thêm dòng `127.0.0.1 lvh.me` ở cuối, lưu lại rồi làm mới nguồn Link.
+- **Báo lỗi `EADDRINUSE`:** cổng 3000 đang bị app khác dùng; tắt app đó (hoặc cửa sổ BAT cũ) rồi chạy lại.
+
 ## Phụ thuộc bên ngoài cần biết
 
 - **Đọc sự kiện TikTok** dùng thư viện không chính thức [`tiktok-live-connector`](https://github.com/zerodytrash/TikTok-Live-Connector). TikTok có thể thay đổi và làm nó ngừng chạy bất cứ lúc nào.
