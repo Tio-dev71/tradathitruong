@@ -8,6 +8,7 @@ import { db } from './src/server/db/database';
 import { webhookRouter } from './src/server/routes/webhookRoutes';
 import { adminRouter } from './src/server/routes/adminRoutes';
 import { setupMultiplayerSocket } from './src/server/socket/multiplayerHandler';
+import { discordSignalRelay } from './src/server/services/discordSignalRelay';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 
 dotenv.config();
@@ -34,10 +35,33 @@ const io = new SocketIOServer(httpServer, {
 });
 
 setupMultiplayerSocket(io);
+discordSignalRelay.setSocketServer(io);
 
 // API Routes
 app.use('/api/webhooks', webhookRouter);
 app.use('/api/admin', adminRouter);
+
+// Gold Price Endpoints (Tiệm Vàng DJN Live Billboard API)
+app.get('/api/gold-price', (_req, res) => {
+  res.json({
+    symbol: 'XAU/USD',
+    price: 2748.50,
+    change: 18.60,
+    changePercent: 0.68,
+    currency: 'USD',
+    unit: 'oz',
+    updatedAt: Date.now(),
+  });
+});
+
+app.post('/api/gold-price', (req, res) => {
+  const { price, change, changePercent } = req.body;
+  if (typeof price === 'number') {
+    io.emit('gold:update', { price, change, changePercent });
+    return res.json({ success: true, price });
+  }
+  return res.status(400).json({ success: false, error: 'Price must be a number' });
+});
 
 // Session check route
 app.get('/api/session/:id', (req, res) => {

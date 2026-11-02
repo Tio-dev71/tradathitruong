@@ -251,3 +251,4 @@ export class TrafficSystem {
     this.vehicles = [];
   }
 }
+

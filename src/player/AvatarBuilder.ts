@@ -243,25 +243,28 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
     if (isSitting) {
       // Clean sitting posture aligned on top of stool
       root.position.y = 0.02;
+      // In Three.js, for limbs extending downwards (y < 0), a negative rotation around X swings them forward (+Z)
       leftLeg.rotation.x = -Math.PI / 2.4;
       rightLeg.rotation.x = -Math.PI / 2.4;
-      leftArm.rotation.x = 0.45;
+      // Hands resting comfortably forward on thighs/knees
+      leftArm.rotation.x = -0.45;
       leftArm.rotation.z = 0.15;
-      rightArm.rotation.x = 0.45;
+      rightArm.rotation.x = -0.45;
       rightArm.rotation.z = -0.15;
       headGroup.position.y = 1.05 + Math.sin(time * 2) * 0.015;
       headGroup.rotation.y = Math.sin(time * 0.8) * 0.08;
-      bodyMesh.rotation.x = 0.04;
+      bodyMesh.rotation.x = -0.04;
       return;
     }
 
     root.position.y = 0;
 
-    // Emote Animations
+    // Emote Animations (Hand actions swing forward towards +Z where the face is)
     if (emote === 'wave') {
-      rightArm.rotation.x = Math.PI * 0.85;
-      rightArm.rotation.z = Math.sin(time * 12) * 0.45;
-      leftArm.rotation.x = 0;
+      // Right hand waves forward and up in front of the avatar
+      rightArm.rotation.x = -Math.PI * 0.82;
+      rightArm.rotation.z = -Math.sin(time * 12) * 0.35 - 0.2;
+      leftArm.rotation.x = -0.1;
       leftArm.rotation.z = 0.1;
       headGroup.rotation.y = Math.sin(time * 4) * 0.2;
       leftLeg.rotation.x = 0;
@@ -270,23 +273,25 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
     }
 
     if (emote === 'laugh') {
-      headGroup.rotation.x = -0.25 + Math.sin(time * 18) * 0.2;
-      bodyMesh.scale.y = 1 + Math.sin(time * 18) * 0.1;
-      leftArm.rotation.x = 0.4;
-      leftArm.rotation.z = 0.4 + Math.sin(time * 18) * 0.15;
-      rightArm.rotation.x = 0.4;
-      rightArm.rotation.z = -0.4 - Math.sin(time * 18) * 0.15;
+      headGroup.rotation.x = 0.15 + Math.sin(time * 18) * 0.15;
+      bodyMesh.scale.y = 1 + Math.sin(time * 18) * 0.08;
+      // Hands hold stomach in front
+      leftArm.rotation.x = -0.4;
+      leftArm.rotation.z = 0.3 + Math.sin(time * 18) * 0.1;
+      rightArm.rotation.x = -0.4;
+      rightArm.rotation.z = -0.3 - Math.sin(time * 18) * 0.1;
       leftLeg.rotation.x = 0;
       rightLeg.rotation.x = 0;
       return;
     }
 
     if (emote === 'sip_tea') {
-      rightArm.rotation.x = 1.2 + Math.sin(time * 3) * 0.1;
-      rightArm.rotation.z = -0.3;
-      leftArm.rotation.x = 0.2;
+      // Right hand raises cup forward to mouth
+      rightArm.rotation.x = -1.25 + Math.sin(time * 3) * 0.08;
+      rightArm.rotation.z = -0.25;
+      leftArm.rotation.x = -0.2;
       leftArm.rotation.z = 0.2;
-      headGroup.rotation.x = 0.15 + Math.sin(time * 3) * 0.05;
+      headGroup.rotation.x = -0.15 + Math.sin(time * 3) * 0.05;
       leftLeg.rotation.x = 0;
       rightLeg.rotation.x = 0;
       return;
@@ -296,18 +301,19 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
       headGroup.rotation.z = 0.25;
       leftArm.rotation.z = 0.75;
       rightArm.rotation.z = -0.75;
-      leftArm.rotation.x = 0.3;
-      rightArm.rotation.x = 0.3;
+      leftArm.rotation.x = -0.3;
+      rightArm.rotation.x = -0.3;
       leftLeg.rotation.x = 0;
       rightLeg.rotation.x = 0;
       return;
     }
 
     if (emote === 'cheer') {
-      leftArm.rotation.x = Math.PI * 0.88;
-      rightArm.rotation.x = Math.PI * 0.88;
-      leftArm.rotation.z = 0.3 + Math.sin(time * 10) * 0.15;
-      rightArm.rotation.z = -0.3 - Math.sin(time * 10) * 0.15;
+      // Both arms raised high and forward in celebration
+      leftArm.rotation.x = -Math.PI * 0.85;
+      rightArm.rotation.x = -Math.PI * 0.85;
+      leftArm.rotation.z = 0.35 + Math.sin(time * 10) * 0.15;
+      rightArm.rotation.z = -0.35 - Math.sin(time * 10) * 0.15;
       headGroup.position.y = 1.05 + Math.abs(Math.sin(time * 8)) * 0.08;
       leftLeg.rotation.x = 0;
       rightLeg.rotation.x = 0;
@@ -316,26 +322,27 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
 
     if (isMoving) {
       const freq = isRunning ? 14 : 9;
-      const amp = isRunning ? 0.9 : 0.6;
+      const amp = isRunning ? 0.8 : 0.55;
 
-      // Leg swing
-      leftLeg.rotation.x = Math.sin(time * freq) * amp;
-      rightLeg.rotation.x = -Math.sin(time * freq) * amp;
+      // Leg swing: negative angle swings leg forward (+Z)
+      leftLeg.rotation.x = -Math.sin(time * freq) * amp;
+      rightLeg.rotation.x = Math.sin(time * freq) * amp;
 
-      // Arm swing (opposite to legs)
-      leftArm.rotation.x = -Math.sin(time * freq) * amp;
-      rightArm.rotation.x = Math.sin(time * freq) * amp;
+      // Arm swing (natural cross-body: opposite to leg)
+      // When left leg steps forward (negative rotation), left arm swings back (positive rotation)
+      leftArm.rotation.x = Math.sin(time * freq) * amp;
+      rightArm.rotation.x = -Math.sin(time * freq) * amp;
 
-      // Vertical bounce
-      headGroup.position.y = 1.05 + Math.abs(Math.sin(time * freq)) * 0.05;
-      bodyMesh.rotation.x = isRunning ? 0.12 : 0.05;
+      // Vertical bounce & forward lean
+      headGroup.position.y = 1.05 + Math.abs(Math.sin(time * freq)) * 0.04;
+      bodyMesh.rotation.x = isRunning ? -0.1 : -0.04;
     } else {
       // Idle breathing & slight head bobbing
       leftLeg.rotation.x = 0;
       rightLeg.rotation.x = 0;
-      leftArm.rotation.x = 0;
+      leftArm.rotation.x = -0.05;
       leftArm.rotation.z = 0.08;
-      rightArm.rotation.x = 0;
+      rightArm.rotation.x = -0.05;
       rightArm.rotation.z = -0.08;
       headGroup.position.y = 1.05 + Math.sin(time * 2.5) * 0.02;
       bodyMesh.rotation.x = 0;

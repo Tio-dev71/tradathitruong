@@ -33,15 +33,18 @@ interface GameState {
   // Dialogue
   dialogue: DialogueState;
 
-  // UI Modals
+  // UI Modals & Notifications
   isAdminOpen: boolean;
   isCreateModalOpen: boolean;
+  creditsNotification: string | null;
 
   // Settings
   settings: GameSettings;
 
   // Actions
   setPlayer: (player: PlayerData | null) => void;
+  updateCredits: (credits: number, teaCount?: number) => void;
+  setCreditsNotification: (msg: string | null) => void;
   setOnlineCount: (count: number) => void;
   setOnlinePlayers: (players: PlayerData[]) => void;
   addRemotePlayer: (player: PlayerData) => void;
@@ -67,6 +70,7 @@ export const useGameStore = create<GameState>((set) => ({
   nextAllowedAt: 0,
   isAdminOpen: false,
   isCreateModalOpen: true,
+  creditsNotification: null,
 
   dialogue: {
     isOpen: false,
@@ -84,6 +88,18 @@ export const useGameStore = create<GameState>((set) => ({
   },
 
   setPlayer: (player) => set({ player, isCreateModalOpen: !player }),
+  updateCredits: (credits, teaCount) =>
+    set((state) => {
+      if (!state.player) return state;
+      return {
+        player: {
+          ...state.player,
+          credits,
+          teaCount: teaCount !== undefined ? teaCount : state.player.teaCount,
+        },
+      };
+    }),
+  setCreditsNotification: (creditsNotification) => set({ creditsNotification }),
   setOnlineCount: (onlineCount) => set({ onlineCount }),
   setOnlinePlayers: (onlinePlayers) => set({ onlinePlayers }),
   addRemotePlayer: (newPlayer) =>

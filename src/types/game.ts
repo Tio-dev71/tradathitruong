@@ -29,6 +29,8 @@ export interface PlayerData {
   isSitting: boolean;
   currentEmote?: string;
   joinedAt: number;
+  credits: number;
+  teaCount: number;
 }
 
 export interface ChatMessage {

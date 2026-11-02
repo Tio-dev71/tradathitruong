@@ -28,6 +28,8 @@ export class AppDatabase {
         nickname TEXT NOT NULL,
         role TEXT NOT NULL,
         avatar_json TEXT NOT NULL,
+        credits INTEGER NOT NULL DEFAULT 100,
+        tea_count INTEGER NOT NULL DEFAULT 0,
         last_seen_at INTEGER NOT NULL,
         created_at INTEGER NOT NULL
       );
@@ -73,6 +75,18 @@ export class AppDatabase {
       );
     `);
 
+    // Ensure columns exist if DB was created previously
+    try {
+      this.db.exec('ALTER TABLE sessions ADD COLUMN credits INTEGER NOT NULL DEFAULT 100;');
+    } catch {
+      // already exists
+    }
+    try {
+      this.db.exec('ALTER TABLE sessions ADD COLUMN tea_count INTEGER NOT NULL DEFAULT 0;');
+    } catch {
+      // already exists
+    }
+
     // Default configuration seeds
     this.setDefaultConfig('acceptRate', '0.8');
     this.setDefaultConfig('cooldownSeconds', '60');
@@ -102,18 +116,18 @@ export class AppDatabase {
   }
 
   // Session helpers
-  public saveSession(id: string, nickname: string, role: string, avatarJson: string) {
+  public saveSession(id: string, nickname: string, role: string, avatarJson: string, credits = 100, teaCount = 0) {
     const now = Date.now();
     const stmt = this.db.prepare(`
-      INSERT INTO sessions (id, nickname, role, avatar_json, last_seen_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO sessions (id, nickname, role, avatar_json, credits, tea_count, last_seen_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         nickname = excluded.nickname,
         role = excluded.role,
         avatar_json = excluded.avatar_json,
         last_seen_at = excluded.last_seen_at
     `);
-    stmt.run(id, nickname, role, avatarJson, now, now);
+    stmt.run(id, nickname, role, avatarJson, credits, teaCount, now, now);
   }
 
   public getSession(id: string) {
@@ -123,9 +137,21 @@ export class AppDatabase {
       nickname: string;
       role: string;
       avatar_json: string;
+      credits: number;
+      tea_count: number;
       last_seen_at: number;
       created_at: number;
     } | undefined;
+  }
+
+  public updateSessionCredits(id: string, credits: number, teaCount?: number) {
+    if (teaCount !== undefined) {
+      const stmt = this.db.prepare('UPDATE sessions SET credits = ?, tea_count = ?, last_seen_at = ? WHERE id = ?');
+      stmt.run(credits, teaCount, Date.now(), id);
+    } else {
+      const stmt = this.db.prepare('UPDATE sessions SET credits = ?, last_seen_at = ? WHERE id = ?');
+      stmt.run(credits, Date.now(), id);
+    }
   }
 
   // Signal helpers

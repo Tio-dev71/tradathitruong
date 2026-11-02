@@ -105,7 +105,7 @@ export const GENERAL_DIALOGUES: Record<string, string[]> = {
     'Chào {role} {name}! Lại ra góc quen ngồi ngắm bảng điện tử à?',
     'Ơ kìa {role} {name}, hôm nay sắc mặt hồng hào thế, chắc vừa chốt lời đúng đỉnh hả?',
     'Ngồi xuống đây {name}! {role} gì mà trông bồn chồn thế kia, nến chưa đóng mà tim đã đập loạn nhịp rồi à?',
-    'Kính chào {role} danh bất hư truyền! Quán cô hôm nay hân hạnh đón tiếp một cao thủ ghé chơi.',
+    'Kính chào {role} {name} danh bất hư truyền! Quán cô hôm nay hân hạnh đón tiếp một cao thủ ghé chơi.',
     'Lại đây {name}, để cô rót cho chén trà giải tỏa áp lực của một {role} chân chính nhé.',
   ],
 };

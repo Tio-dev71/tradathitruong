@@ -40,7 +40,7 @@ export class SignalDecisionService {
     return { onCooldown: false, remainingSeconds: 0, nextAllowedAt: now };
   }
 
-  public async requestSignal(playerId: string, role: PlayerRole = 'Trader Tập Sự'): Promise<SignalDecisionResult> {
+  public async requestSignal(playerId: string, role: PlayerRole = 'Trader Tập Sự', teaCount = 0): Promise<SignalDecisionResult> {
     const now = Date.now();
     const cooldownSec = this.getCooldownSeconds();
 
@@ -56,8 +56,10 @@ export class SignalDecisionService {
       };
     }
 
-    // Server-side cryptographically secure random 80/20 decision
-    const acceptRate = this.getAcceptRate();
+    // Server-side cryptographically secure random decision with tea luck boost
+    const baseAcceptRate = this.getAcceptRate();
+    // Uống càng nhiều trà đá, độ minh mẫn và thiện cảm của Bà càng cao (+5% mỗi chén, tối đa 98%)
+    const acceptRate = Math.min(0.98, baseAcceptRate + teaCount * 0.05);
     // Generate an integer between 0 and 9999
     const randomVal = crypto.randomInt(0, 10000);
     const threshold = Math.round(acceptRate * 10000);

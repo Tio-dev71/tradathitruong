@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { CollisionSystem } from './CollisionSystem';
+import { GoldBillboardSystem } from './GoldBillboardSystem';
 
 export interface StoolSpot {
   x: number;
@@ -11,6 +12,7 @@ export class TeaStallBuilder {
   private scene: THREE.Scene;
   private collisionSystem: CollisionSystem;
   public stoolSpots: StoolSpot[] = [];
+  public goldBillboard!: GoldBillboardSystem;
 
   constructor(scene: THREE.Scene, collisionSystem: CollisionSystem) {
     this.scene = scene;
@@ -19,6 +21,7 @@ export class TeaStallBuilder {
 
   public buildAll() {
     this.buildGround();
+    this.buildWelcomeArch();
     this.buildBanyanTree();
     this.buildColonialWall();
     this.buildTeaTableAndProps();
@@ -351,7 +354,7 @@ export class TeaStallBuilder {
     this.scene.add(stallGroup);
   }
 
-  // 5. Plastic Stools with exact Snap coordinates
+  // 5. Plastic Stools with exact Snap coordinates (Ghế nhựa lùn Song Long / Đại Đồng Tiến)
   private buildPlasticStools() {
     const redMat = new THREE.MeshStandardMaterial({ color: 0xdf2828, roughness: 0.5 });
     const blueMat = new THREE.MeshStandardMaterial({ color: 0x1d70b8, roughness: 0.5 });
@@ -360,24 +363,24 @@ export class TeaStallBuilder {
       const stoolGroup = new THREE.Group();
       stoolGroup.position.set(x, 0, z);
 
-      // Seat top (Height = 0.42)
-      const seatGeo = new THREE.BoxGeometry(0.48, 0.06, 0.48);
+      // Seat top (Height = 0.40, dimensions 0.34 x 0.05 x 0.34 prevents clipping through chibi characters)
+      const seatGeo = new THREE.BoxGeometry(0.34, 0.05, 0.34);
       const seat = new THREE.Mesh(seatGeo, colorMat);
-      seat.position.y = 0.42;
+      seat.position.y = 0.40;
       seat.castShadow = true;
       stoolGroup.add(seat);
 
-      // 4 tapered legs
-      const legGeo = new THREE.CylinderGeometry(0.03, 0.035, 0.42, 6);
+      // 4 tapered plastic legs
+      const legGeo = new THREE.CylinderGeometry(0.024, 0.028, 0.40, 6);
       const legOffsets = [
-        { x: -0.18, z: -0.18 },
-        { x: 0.18, z: -0.18 },
-        { x: -0.18, z: 0.18 },
-        { x: 0.18, z: 0.18 },
+        { x: -0.12, z: -0.12 },
+        { x: 0.12, z: -0.12 },
+        { x: -0.12, z: 0.12 },
+        { x: 0.12, z: 0.12 },
       ];
       legOffsets.forEach((lo) => {
         const leg = new THREE.Mesh(legGeo, colorMat);
-        leg.position.set(lo.x, 0.21, lo.z);
+        leg.position.set(lo.x, 0.20, lo.z);
         leg.castShadow = true;
         stoolGroup.add(leg);
       });
@@ -477,7 +480,132 @@ export class TeaStallBuilder {
     this.scene.add(crossWireLine);
   }
 
-  // 7. Across-The-Street Storefronts & Colonial Shophouses (Dãy nhà phố bên kia đường)
+  // 1b. Traditional Vietnamese Welcome Arch (Cổng Chào Khu Phố Văn Hóa / Quán Trà Đá)
+  private buildWelcomeArch() {
+    const archGroup = new THREE.Group();
+    const archX = -15.0;
+    archGroup.position.set(archX, 0, 0);
+
+    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x8b1e1e, roughness: 0.65 });
+    const stoneBaseMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.9 });
+    const goldTrimMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.7, roughness: 0.3 });
+    const roofTileMat = new THREE.MeshStandardMaterial({ color: 0xa83232, roughness: 0.7 });
+
+    const pillarZ1 = 1.0;
+    const pillarZ2 = 7.0;
+    const pillarHeight = 5.2;
+
+    // Two main gate pillars (Cột cổng chào)
+    [pillarZ1, pillarZ2].forEach((pz) => {
+      // Stone base
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.9), stoneBaseMat);
+      base.position.set(0, 0.3, pz);
+      base.castShadow = true;
+      base.receiveShadow = true;
+      archGroup.add(base);
+
+      // Red brick pillar body
+      const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.65, pillarHeight - 0.6, 0.65), pillarMat);
+      pillar.position.set(0, (pillarHeight + 0.6) / 2, pz);
+      pillar.castShadow = true;
+      pillar.receiveShadow = true;
+      archGroup.add(pillar);
+
+      // Gold capital trim on top of pillar
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 0.8), goldTrimMat);
+      cap.position.set(0, pillarHeight + 0.1, pz);
+      archGroup.add(cap);
+
+      // Add collision so player does not walk through the gate pillars
+      this.collisionSystem.addBox(archX - 0.45, pz - 0.45, archX + 0.45, pz + 0.45);
+    });
+
+    // Horizontal Lintel Beam (Xà ngang cổng)
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.5, pillarZ2 - pillarZ1 + 1.2), pillarMat);
+    beam.position.set(0, pillarHeight + 0.35, (pillarZ1 + pillarZ2) / 2);
+    beam.castShadow = true;
+    archGroup.add(beam);
+
+    // Curved Traditional Vietnamese Roof (Mái ngói cong đình làng)
+    const roofSpan = pillarZ2 - pillarZ1 + 2.2;
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.35, roofSpan), roofTileMat);
+    roof.position.set(0, pillarHeight + 0.75, (pillarZ1 + pillarZ2) / 2);
+    roof.castShadow = true;
+    archGroup.add(roof);
+
+    // Roof upper tier
+    const topRoof = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.28, roofSpan - 0.8), roofTileMat);
+    topRoof.position.set(0, pillarHeight + 1.02, (pillarZ1 + pillarZ2) / 2);
+    archGroup.add(topRoof);
+
+    // Golden ridge ornament (Kìm nóc / Lưỡng long chầu nguyệt placeholder)
+    const crest = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 6), goldTrimMat);
+    crest.position.set(0, pillarHeight + 1.35, (pillarZ1 + pillarZ2) / 2);
+    archGroup.add(crest);
+
+    // Welcome Signboard (Biển Cổng Chào)
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // Lacquer red background
+      ctx.fillStyle = '#7f1d1d';
+      ctx.fillRect(0, 0, 1024, 256);
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 10;
+      ctx.strokeRect(12, 12, 1000, 232);
+
+      // Inner ornate border
+      ctx.lineWidth = 3;
+      ctx.strokeRect(24, 24, 976, 208);
+
+      // Text lines
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 26px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('★ KHU PHỐ VĂN HÓA TRUYỀN THỐNG ★', 512, 65);
+
+      ctx.fillStyle = '#ffd700';
+      ctx.font = '900 60px serif';
+      ctx.fillText('QUÁN TRÀ ĐÁ THỊ TRƯỜNG', 512, 142);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('CHÚC QUÝ KHÁCH VÀO BẮT ĐÁY - RA ĐỈNH • MÃ ĐÁO THÀNH CÔNG', 512, 202);
+    }
+
+    const signTex = new THREE.CanvasTexture(canvas);
+    const signBoard = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 1.25, 4.4),
+      new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.4 })
+    );
+    signBoard.position.set(0, pillarHeight - 0.55, (pillarZ1 + pillarZ2) / 2);
+    signBoard.castShadow = true;
+    archGroup.add(signBoard);
+
+    // 2 Festive Red Lanterns hanging from eaves
+    [pillarZ1 + 0.4, pillarZ2 - 0.4].forEach((lz) => {
+      const lanternMat = new THREE.MeshStandardMaterial({
+        color: 0xff2222,
+        emissive: 0xff3300,
+        emissiveIntensity: 0.8,
+        roughness: 0.4,
+      });
+      const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), lanternMat);
+      lantern.scale.set(1, 1.3, 1);
+      lantern.position.set(0, pillarHeight - 0.4, lz);
+      archGroup.add(lantern);
+
+      const light = new THREE.PointLight(0xff7733, 1.0, 6);
+      light.position.set(0, pillarHeight - 0.6, lz);
+      archGroup.add(light);
+    });
+
+    this.scene.add(archGroup);
+  }
+
+  // 7. Across-The-Street Storefronts & TIỆM VÀNG DJN with Live Gold Billboard
   private buildAcrossStreetBuildings() {
     const townGroup = new THREE.Group();
     townGroup.position.set(0, 0, 24);
@@ -486,6 +614,97 @@ export class TeaStallBuilder {
     const buildingWidth = 7.0;
 
     for (let i = -3; i <= 3; i++) {
+      if (i === 0) {
+        // --- FLAGSHIP: TIỆM VÀNG DJN ---
+        const djnHeight = 13.5;
+        const djnWidth = 8.2;
+        const djnMat = new THREE.MeshStandardMaterial({
+          color: 0x661010, // Royal Burgundy & Gold Luxury Theme
+          roughness: 0.7,
+        });
+
+        // Main building block
+        const djnMesh = new THREE.Mesh(new THREE.BoxGeometry(djnWidth, djnHeight, 8), djnMat);
+        djnMesh.position.set(0, djnHeight / 2, 0);
+        djnMesh.castShadow = true;
+        djnMesh.receiveShadow = true;
+        townGroup.add(djnMesh);
+
+        // Gold Trim Cornices on Building Top and Middle
+        const goldTrimMat = new THREE.MeshStandardMaterial({
+          color: 0xd4af37,
+          metalness: 0.8,
+          roughness: 0.25,
+        });
+        const topRoofCornice = new THREE.Mesh(new THREE.BoxGeometry(djnWidth + 0.4, 0.4, 8.4), goldTrimMat);
+        topRoofCornice.position.set(0, djnHeight, 0);
+        townGroup.add(topRoofCornice);
+
+        const midCornice = new THREE.Mesh(new THREE.BoxGeometry(djnWidth + 0.3, 0.3, 8.3), goldTrimMat);
+        midCornice.position.set(0, 4.8, 0);
+        townGroup.add(midCornice);
+
+        // Ground Floor Gold Shop Glass Entrance & Pillars
+        const glassMat = new THREE.MeshStandardMaterial({
+          color: 0x223344,
+          roughness: 0.1,
+          metalness: 0.6,
+        });
+        const glassDoor = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.2, 0.1), glassMat);
+        glassDoor.position.set(0, 1.6, -4.05);
+        townGroup.add(glassDoor);
+
+        // Two Golden Pillars at entrance
+        [-2.3, 2.3].forEach((px) => {
+          const goldPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 4.4, 12), goldTrimMat);
+          goldPillar.position.set(px, 2.2, -4.1);
+          goldPillar.castShadow = true;
+          townGroup.add(goldPillar);
+        });
+
+        // Main Storefront Signboard: "TIỆM VÀNG DJN"
+        const signCanvas = document.createElement('canvas');
+        signCanvas.width = 1024;
+        signCanvas.height = 256;
+        const sCtx = signCanvas.getContext('2d');
+        if (sCtx) {
+          sCtx.fillStyle = '#4a0e0e';
+          sCtx.fillRect(0, 0, 1024, 256);
+          sCtx.strokeStyle = '#ffd700';
+          sCtx.lineWidth = 12;
+          sCtx.strokeRect(10, 10, 1004, 236);
+
+          sCtx.fillStyle = '#ffd700';
+          sCtx.font = '900 64px serif';
+          sCtx.textAlign = 'center';
+          sCtx.fillText('🏛️ TIỆM VÀNG BẠC ĐÁ QUÝ DJN', 512, 105);
+
+          sCtx.fillStyle = '#fef08a';
+          sCtx.font = 'bold 28px sans-serif';
+          sCtx.fillText('VÀNG MIẾNG 9999 • TRANG SỨC CAO CẤP • TỶ GIÁ THẾ GIỚI', 512, 175);
+        }
+        const djnSignTex = new THREE.CanvasTexture(signCanvas);
+        const djnSignMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(6.6, 1.3, 0.15),
+          new THREE.MeshStandardMaterial({ map: djnSignTex, roughness: 0.3 })
+        );
+        djnSignMesh.position.set(0, 4.0, -4.15);
+        townGroup.add(djnSignMesh);
+
+        // --- GIANT ELECTRONIC LIVE GOLD BILLBOARD (BẢNG GIÁ VÀNG QUỐC TẾ) ---
+        this.goldBillboard = new GoldBillboardSystem();
+        this.goldBillboard.mesh.position.set(0, 8.2, -4.12);
+        townGroup.add(this.goldBillboard.mesh);
+
+        // Storefront Spotlights
+        const signSpot = new THREE.PointLight(0xffd700, 1.8, 14);
+        signSpot.position.set(0, 5.2, -5.0);
+        townGroup.add(signSpot);
+
+        continue;
+      }
+
+      // Other Shophouses
       const bColor = colors[Math.abs(i) % colors.length];
       const bMat = new THREE.MeshStandardMaterial({ color: bColor, roughness: 0.85 });
 

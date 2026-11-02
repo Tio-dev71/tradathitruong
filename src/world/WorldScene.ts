@@ -257,7 +257,12 @@ export class WorldScene {
     // 3. Update Street Traffic (Motorbikes & Cars)
     this.trafficSystem.update(delta);
 
-    // 4. Animate particles
+    // 4. Update Tiệm Vàng DJN Gold Billboard (Realtime tick & candlestick updates)
+    if (this.stallBuilder.goldBillboard) {
+      this.stallBuilder.goldBillboard.update(timeSec, delta);
+    }
+
+    // 5. Animate particles
     if (this.dustPoints) {
       const posAttr = this.dustPoints.geometry.getAttribute('position') as THREE.BufferAttribute;
       for (let i = 0; i < posAttr.count; i++) {
@@ -292,6 +297,10 @@ export class WorldScene {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
   };
+
+  public updateGoldPrice(price: number, change?: number, changePercent?: number) {
+    this.stallBuilder.goldBillboard?.updatePrice(price, change, changePercent);
+  }
 
   public dispose() {
     if (this.animFrameId !== null) {

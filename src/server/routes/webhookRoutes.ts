@@ -98,3 +98,30 @@ webhookRouter.post('/signals', (req: Request, res: Response) => {
   }
 });
 
+// Dedicated Ingestion endpoint for Discord Trading Bot Webhooks / Forwarders
+webhookRouter.post('/discord', async (req: Request, res: Response) => {
+  try {
+    const { discordSignalRelay } = await import('../services/discordSignalRelay');
+    const result = discordSignalRelay.processDiscordPayload(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error || 'Failed to process Discord signal',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Discord signal received and broadcasted to 3D room',
+      signal: result.signal,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      error: 'Internal error processing Discord signal',
+      details: err.message,
+    });
+  }
+});
+

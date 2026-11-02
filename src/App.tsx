@@ -30,6 +30,8 @@ export function App() {
   const {
     player,
     setPlayer,
+    updateCredits,
+    setCreditsNotification,
     setOnlineCount,
     addChatMessage,
     setActiveSignal,
@@ -210,28 +212,34 @@ export function App() {
       world.scene.remove(localAvatarRigRef.current.root);
     }
 
-    // Spawn local avatar in 3D scene
+    // Spawn local avatar in 3D scene right in front of Cổng Chào
+    const spawnX = -15.0;
+    const spawnZ = 4.0;
     const rig = buildChibiAvatar(avatar, nickname, role);
-    rig.root.position.set(-5, 0, 5);
+    rig.root.position.set(spawnX, 0, spawnZ);
+    rig.root.rotation.y = Math.PI / 2; // Facing +X towards the tea stall
     world.scene.add(rig.root);
     localAvatarRigRef.current = rig;
 
     if (playerControllerRef.current) {
-      playerControllerRef.current.position.set(-5, 0, 5);
+      playerControllerRef.current.position.set(spawnX, 0, spawnZ);
+      playerControllerRef.current.rotationY = Math.PI / 2;
     }
 
-    // Set store state
+    // Set store state with 100 starting credits
     const pData: PlayerData = {
       id: sessionId,
       nickname,
       role,
       avatar,
-      position: { x: -5, y: 0, z: 5 },
-      rotationY: 0,
+      position: { x: spawnX, y: 0, z: spawnZ },
+      rotationY: Math.PI / 2,
       isMoving: false,
       isRunning: false,
       isSitting: false,
       joinedAt: Date.now(),
+      credits: 100,
+      teaCount: 0,
     };
     setPlayer(pData);
     setIsCreateModalOpen(false);
@@ -255,10 +263,24 @@ export function App() {
       {
         onRoomState: (data) => {
           setOnlineCount(data.onlineCount);
+          if (data.self) {
+            updateCredits(data.self.credits, data.self.teaCount);
+          }
           // Spawn all existing players
           data.players.forEach((other) => {
             world.addRemotePlayer(other);
           });
+        },
+        onCreditsUpdate: (data) => {
+          updateCredits(data.credits, data.teaCount);
+          setCreditsNotification(data.message);
+          soundEngine.playCoin();
+          setTimeout(() => {
+            setCreditsNotification(null);
+          }, 4500);
+        },
+        onGoldUpdate: (data) => {
+          world.updateGoldPrice(data.price, data.change, data.changePercent);
         },
         onPlayerJoined: (newPlayer) => {
           world.addRemotePlayer(newPlayer);

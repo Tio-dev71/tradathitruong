@@ -7,7 +7,7 @@
     "dev": "tsx server.ts",
     "build": "vite build",
     "start": "NODE_ENV=production tsx server.ts",
-    "test": "vitest run",
+    "test": "vitest run --fileParallelism=false",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"

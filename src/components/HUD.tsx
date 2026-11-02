@@ -16,6 +16,7 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
     toggleSound,
     setIsAdminOpen,
     cooldownRemaining,
+    creditsNotification,
   } = useGameStore();
 
   const handleSoundToggle = () => {
@@ -31,6 +32,16 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
 
   return (
     <div className="fixed inset-0 pointer-events-none z-20 flex flex-col justify-between p-4 sm:p-6 select-none">
+      {/* Floating Credits / Event Notification */}
+      {creditsNotification && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300">
+          <div className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 text-stone-950 font-black text-xs sm:text-sm shadow-2xl border-2 border-yellow-200 flex items-center gap-2.5 animate-pulse">
+            <span className="text-xl">✨</span>
+            <span>{creditsNotification}</span>
+          </div>
+        </div>
+      )}
+
       {/* Top Bar */}
       <div className="flex items-start justify-between w-full">
         {/* Top-Left: Logo & Tagline */}
@@ -57,6 +68,24 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
             <span>{onlineCount} Online</span>
+          </div>
+
+          {/* Credits Badge (Số Xu) */}
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-950/90 to-yellow-950/90 border border-amber-500/80 text-xs font-black text-amber-300 shadow-md backdrop-blur-sm"
+            title="Số Xu của bạn (Dùng để uống trà đá và xem quẻ Thầy Đồ)"
+          >
+            <span className="text-sm">🪙</span>
+            <span>{player ? player.credits : 100} Xu</span>
+          </div>
+
+          {/* Tea Consumed & Luck Boost Badge */}
+          <div
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-600/60 text-xs font-bold text-emerald-300 shadow backdrop-blur-sm"
+            title={`Đã uống ${player ? player.teaCount : 0} cốc. Mỗi cốc tăng +5% xác suất được Bà Bán Trà phán kèo VIP!`}
+          >
+            <span className="text-sm">🍵</span>
+            <span>{player ? player.teaCount : 0} Ly (+{Math.min(18, (player ? player.teaCount : 0) * 5)}% Lộc)</span>
           </div>
 
           {/* Player Badge */}

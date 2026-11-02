@@ -12,7 +12,7 @@ export interface SignalData {
   takeProfit: string[];
   timeframe: string;
   note: string;
-  source: 'MOCK_ENGINE' | 'WEBHOOK';
+  source: 'MOCK_ENGINE' | 'WEBHOOK' | 'DISCORD' | string;
   isDemo: boolean;
   createdAt: number;
   expiresAt: number;

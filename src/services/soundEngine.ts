@@ -131,6 +131,38 @@ class SoundEngine {
     osc.stop(now + 0.4);
   }
 
+  // Coin / Xu Spent / Earned SFX (Tiếng đồng xu leng keng)
+  public playCoin() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx || !this.sfxGain) return;
+
+    const now = this.ctx.currentTime;
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(987.77, now); // B5
+    osc1.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(1975.53, now);
+    osc2.frequency.setValueAtTime(2637.02, now + 0.08);
+
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.45);
+    osc2.stop(now + 0.45);
+  }
+
   // Interactive UI Click
   public playUiClick() {
     if (this.isMuted) return;

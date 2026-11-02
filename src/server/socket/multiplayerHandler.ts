@@ -101,12 +101,17 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
         }
       }
 
-      // Save session to SQLite
-      db.saveSession(sessionId, nickname, role, JSON.stringify(avatar));
+      // Check if session exists in DB to restore credits & tea stats
+      const existingSession = db.getSession(sessionId);
+      const credits = existingSession ? existingSession.credits : 100;
+      const teaCount = existingSession ? existingSession.tea_count : 0;
 
-      // Initial spawn position around the tea stall entrance
-      const spawnX = -8 + (Math.random() * 4 - 2);
-      const spawnZ = 8 + (Math.random() * 4 - 2);
+      // Save session to SQLite
+      db.saveSession(sessionId, nickname, role, JSON.stringify(avatar), credits, teaCount);
+
+      // Initial spawn position: Right in front of the Vietnamese Welcome Arch (Cổng Chào)
+      const spawnX = -15 + (Math.random() * 1.2 - 0.6);
+      const spawnZ = 4 + (Math.random() * 1.4 - 0.7);
 
       const playerData: PlayerData = {
         id: sessionId,
@@ -114,11 +119,13 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
         role,
         avatar,
         position: { x: spawnX, y: 0, z: spawnZ },
-        rotationY: Math.PI / 4,
+        rotationY: Math.PI / 2, // Facing along +X down the sidewalk towards the tea stall
         isMoving: false,
         isRunning: false,
         isSitting: false,
         joinedAt: Date.now(),
+        credits,
+        teaCount,
       };
 
       activePlayersStore.addPlayer(socket.id, playerData);
@@ -224,13 +231,14 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
       io.emit('chat:message', chatMsg);
     });
 
-    // 6. NPC Interaction (Dialogue & Signal 80/20 request)
+    // 6. NPC Interaction (Dialogue & Signal 80/20 request & Economy Actions)
     socket.on('npc:interact', async (data: { action: string }) => {
       const player = activePlayersStore.getPlayerBySocket(socket.id);
       if (!player) return;
 
       if (data.action === 'signal_request') {
-        const result = await signalDecisionService.requestSignal(player.id, player.role);
+        // Pass player.teaCount: Drinking more tea boosts luck!
+        const result = await signalDecisionService.requestSignal(player.id, player.role, player.teaCount);
         // Reply privately with signal decision
         socket.emit('signal:response', result);
 
@@ -250,11 +258,61 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
           text: comment,
         });
       } else if (data.action === 'tea_order') {
-        const comment = dialogueService.getTeaOrderResponse();
+        // 1 Cốc Trà Đá giá 10 credits
+        const teaCost = 10;
+        if (player.credits < teaCost) {
+          const refuseQuote = `Hết xèng rồi con ơi! 10 xu một cốc trà đá mát lạnh, mà trong túi con chỉ còn ${player.credits} xu thôi! Ra ghế ngồi hóng chuyện thị trường đi, bao giờ có lộc hãy uống!`;
+          socket.emit('npc:dialogue_reply', {
+            action: data.action,
+            speaker: 'Bà Bán Trà',
+            text: refuseQuote,
+          });
+          io.emit('npc:speech', {
+            speaker: 'Bà Bán Trà',
+            text: refuseQuote,
+            targetPlayerId: player.id,
+            targetNickname: player.nickname,
+            allowed: false,
+          });
+          return;
+        }
+
+        // Deduct 10 credits & increase tea count
+        player.credits -= teaCost;
+        player.teaCount += 1;
+        db.updateSessionCredits(player.id, player.credits, player.teaCount);
+
+        // Notify client of credits update
+        socket.emit('player:credits_update', {
+          credits: player.credits,
+          teaCount: player.teaCount,
+          cost: teaCost,
+          action: 'tea_order',
+          message: `Đã uống 1 cốc trà đá (-10 Xu) • Tỉ lệ được Bà cho kèo tăng vọt!`,
+        });
+
+        // Trigger player drinking emote
+        player.currentEmote = 'sip_tea';
+        io.emit('player:emoted', {
+          id: player.id,
+          emote: 'sip_tea',
+        });
+
+        const luckPct = Math.min(98, Math.round((0.8 + player.teaCount * 0.05) * 100));
+        const praiseQuote = `Trà đá ngon mát lạnh! Chén thứ ${player.teaCount} rồi đấy, tinh thần sảng khoái, mắt sáng như đèn pha! Tỉ lệ được bà soi kèo chuẩn đã tăng lên ${luckPct}%! Ngồi thưởng trà đi con.`;
+
         socket.emit('npc:dialogue_reply', {
           action: data.action,
           speaker: 'Bà Bán Trà',
-          text: comment,
+          text: praiseQuote,
+        });
+
+        io.emit('npc:speech', {
+          speaker: 'Bà Bán Trà',
+          text: praiseQuote,
+          targetPlayerId: player.id,
+          targetNickname: player.nickname,
+          allowed: true,
         });
       } else if (data.action === 'stories') {
         const comment = dialogueService.getTraderStory();
@@ -271,6 +329,37 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
           text: comment,
         });
       } else if (data.action === 'thay_do_signal') {
+        // Xin quẻ Thầy Đồ Xóc Đĩa tốn 15 credits
+        const queCost = 15;
+        if (player.credits < queCost) {
+          const refuseQuote = `Quẻ thánh linh nghiệm vô cùng, thiên cơ bất khả lộ miễn phí con ơi! Xin một quẻ xóc đĩa tốn 15 xu, mà con còn có ${player.credits} xu thôi, mau ra xin lộc bà bán nước đi!`;
+          socket.emit('npc:dialogue_reply', {
+            action: data.action,
+            speaker: 'Thầy Đồ Xóc Đĩa',
+            text: refuseQuote,
+          });
+          io.emit('thay_do:speech', {
+            speaker: 'Thầy Đồ Xóc Đĩa',
+            text: refuseQuote,
+            targetPlayerId: player.id,
+            targetNickname: player.nickname,
+            allowed: false,
+          });
+          return;
+        }
+
+        // Deduct 15 credits
+        player.credits -= queCost;
+        db.updateSessionCredits(player.id, player.credits);
+
+        socket.emit('player:credits_update', {
+          credits: player.credits,
+          teaCount: player.teaCount,
+          cost: queCost,
+          action: 'thay_do_signal',
+          message: `Gieo quẻ xóc đĩa (-15 Xu) • Thầy Đồ đang mở bát xem vận hạn!`,
+        });
+
         const result = await signalDecisionService.requestThayDoSignal(player.id, player.role);
         socket.emit('signal:response', { ...result, sourceNpc: 'thay_do' });
 
