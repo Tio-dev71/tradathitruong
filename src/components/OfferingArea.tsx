@@ -7,22 +7,17 @@ import { Person, hash } from './Person';
 // steps; offerers kneel at the foot of the steps, the top donors one row behind them.
 const BURNER = { x: 50, y: 58 };
 export const MAIN = { x: 50, y: 74 }; // right at the foot of the steps
-export const SMALL_MATS = [
-  { x: 30, y: 77 },
-  { x: 40, y: 77 },
-  { x: 60, y: 77 },
-  { x: 70, y: 77 },
+// The top 6 of TOP THÀNH TÂM kneel on one row of cushions in front of the crowd, with their name plates.
+// (The board still lists 10; ranks 7-10 have no cushion, so the front stays tidy.)
+// Spread 13% apart so the name plates don't overlap
+export const TOP_SEATS = [
+  { x: 11, y: 77.3 },
+  { x: 24, y: 77.3 },
+  { x: 37, y: 77.3 },
+  { x: 63, y: 77.3 },
+  { x: 76, y: 77.3 },
+  { x: 89, y: 77.3 },
 ];
-// The ten cushions belong to the top 10 donors: ranks 1-4 in front, 5-10 behind. The chủ lễ mat stays free.
-const BACK_SEATS = [
-  { x: 22, y: 84 },
-  { x: 32, y: 84 },
-  { x: 41.5, y: 84 },
-  { x: 58.5, y: 84 },
-  { x: 68, y: 84 },
-  { x: 78, y: 84 },
-];
-export const TOP10_SEATS = [...SMALL_MATS, ...BACK_SEATS];
 const widthAt = (y: number) => `${10 * (0.62 + ((y - 70) / 30) * 0.42)}%`;
 
 const LotusShape: React.FC<{ id: string }> = ({ id }) => (
@@ -53,7 +48,7 @@ const NamePlate: React.FC<{ name: string; avatar?: string; badge?: string; big?:
 }) => (
   <div
     className={`absolute bottom-full ${lift ? 'mb-[15px]' : 'mb-0.5'} font-temple flex items-center gap-1 w-max pl-0.5 pr-1.5 rounded-full border border-[#d9a55a] bg-linear-to-b from-[#5a3413] to-[#2a1608] shadow-[0_0_8px_rgba(217,165,90,0.45)] ${
-      big ? 'max-w-[120px] text-[9px]' : 'max-w-[78px] text-[7px]'
+      big ? 'max-w-[120px] text-[9px]' : 'max-w-[58px] text-[6.5px]'
     }`}
   >
     {caption && (
@@ -247,10 +242,7 @@ export const OfferingArea: React.FC<{
       {layer !== 'labels' && (
         <>
           <BurnerGlow on={burnerLit ?? Boolean(offering)} />
-          {SMALL_MATS.map((m, i) => (
-            <Cushion key={`mat-${i}`} x={m.x} y={m.y} w={9} />
-          ))}
-          {BACK_SEATS.map((m, i) => (
+          {TOP_SEATS.map((m, i) => (
             <Cushion key={`top-${i}`} x={m.x} y={m.y} w={8.5} />
           ))}
         </>
@@ -271,16 +263,15 @@ export const OfferingArea: React.FC<{
               mode="bow"
             />
           )}
-          {topDonors.slice(0, TOP10_SEATS.length).map((d, i) => away.includes(d.username) ? null : (
+          {topDonors.slice(0, TOP_SEATS.length).map((d, i) => away.includes(d.username) ? null : (
             <Occupant
               key={`top-${d.username}`}
               id={d.username}
               name={d.displayName || d.username}
               avatar={d.avatarUrl}
-              x={TOP10_SEATS[i].x}
-              y={TOP10_SEATS[i].y}
+              x={TOP_SEATS[i].x}
+              y={TOP_SEATS[i].y}
               badge={String(i + 1)}
-              lift={i % 2 === 1}
               labelsOnly={labelsOnly}
             />
           ))}

@@ -16,7 +16,10 @@ The owner streams this on TikTok through TikTok LIVE Studio (Link source `http:/
 - `src/services/soundEngine.ts`: voice queue (`priorityQueue` for gifts and "Đọc ngay"), `OFFERING_BLESSINGS` = the owner's 20 blessings (keep their wording), `setChannelName` (every spoken self-reference uses the saved channel name, never a hard-coded one).
 - `src/components/ChanhDienStage.tsx`: the stage; incense offering queue (5 at once, once a minute per person).
 - `src/three/`: 3D devotees. `nguoi.fbx` (own rig) gets Mixamo clips retargeted (`retarget.ts`); bows are procedural; idle kneelers animate every third frame for speed.
-- `src/components/DevoteeCrowd.tsx`: seat grid (`SEATS`, generated rows), narrow walkway in the middle.
+- `src/components/DevoteeCrowd.tsx`: seats (`SEATS`, seeded jittered crowd on both sides of a narrow walkway).
+- Settings saved by the server in `settings.json` (+ `uploads/` for a custom background), replayed to every page: channel name, TOP board on/off, comment keyword, board title, background (`/api/control` setName/setTopBoard/setKeyword/setBoardTitle, `/api/background`).
+- Gieo quẻ: every 99 hearts from the whole room draws one of 36 kind quẻ (`src/data/fortunes.ts`, no bad omens, no money or future claims); `FortuneCard`, `FortuneBox` (shakes). Top 6 kneel on cushions (`OfferingArea` `TOP_SEATS`); offerers stand in two staggered rows.
+- `?demo=1` exposes `window.__dco` (gift/comment/like) for testing; `&fill=1` builds a sample scene for screenshots.
 
 ## Owner decisions to keep
 

@@ -17,6 +17,8 @@ import { maskBanned } from './services/bannedWords';
 import { detectWish, blessingFor, shouldAnswer } from './services/wishResponder';
 import { pickSeat } from './services/seating';
 import { LIKES_PER_RAIN } from './services/likeRain';
+import { FORTUNES } from './data/fortunes';
+import type { FortuneDraw } from './components/FortuneCard';
 
 const SHARE_REMINDER_MS = 5 * 60 * 1000;
 const IDLE_BLESSING_MS = 90 * 1000; // voice quiet this long -> blessing + share ask
@@ -24,8 +26,17 @@ const WELCOME_CHECK_MS = 6 * 1000;
 const MAX_WAITING_JOINERS = 30;
 const SEAT_AFTER_JOIN_MS = 10 * 1000;
 const DEFAULT_CHANNEL_NAME = 'Tâm Tịnh Tâm An'; // until the owner saves their own in the dashboard
+const DEFAULT_KEYWORD = 'adidaphat';
+const lettersOnly = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 const SPOTLIGHT_COINS = 1; // any gift for now (small channel); raise when gifts get frequent
-const POINTS_PER_COIN = 10; // merit board: a 1-coin rose = 10 comments
+const POINTS_PER_COIN = 10;
+const FORTUNE_LIKES = 99; // hearts from the whole room per quẻ // merit board: a 1-coin rose = 10 comments
 
 const RAIN_MS = 60 * 1000;
 // Only the live stage page (Link source in LIVE Studio) makes sound by default; the dashboard stays silent so audio never doubles
@@ -49,6 +60,7 @@ const ROBE_COLORS = [
 export default function App() {
   const [config, setConfig] = useState<StreamConfig>({
     channelName: DEFAULT_CHANNEL_NAME,
+    showTopBoard: true,
     liveTitle: 'TÂM TỊNH TÂM AN',
     subTitle: 'Gõ "adidaphat" để vào lễ Phật',
     isConnected: true,
@@ -111,8 +123,24 @@ export default function App() {
   const [likeProgress, setLikeProgress] = useState(0);
   const [rainUntil, setRainUntil] = useState(0);
   const likesRef = useRef(0);
+
+  // Gieo quẻ (for fun): every FORTUNE_LIKES hearts from the whole room draws one quẻ for everyone
+  const [fortuneDraws, setFortuneDraws] = useState<FortuneDraw[]>([]);
+  const [fortuneProgress, setFortuneProgress] = useState(0);
+  const fortuneLikesRef = useRef(0);
+  const countFortuneLikes = (count: number) => {
+    const total = fortuneLikesRef.current + count;
+    fortuneLikesRef.current = total % FORTUNE_LIKES;
+    setFortuneProgress(fortuneLikesRef.current);
+    // a burst that passes 99 several times still draws just one quẻ
+    if (total < FORTUNE_LIKES) return;
+    const fortune = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
+    setFortuneDraws((prev) => [...prev, { id: `que-${Date.now()}`, name: 'Cả nhà', fortune }].slice(-10));
+    if (config.autoTts) soundEngine.readFortune(fortune);
+  };
   const lastTotalLikesRef = useRef<number | null>(null);
   const addLikes = (count: number) => {
+    countFortuneLikes(count);
     const total = likesRef.current + count;
     const rains = Math.floor(total / LIKES_PER_RAIN);
     likesRef.current = total % LIKES_PER_RAIN;
@@ -337,13 +365,8 @@ export default function App() {
     noteInteractor(cleanUser);
     const now = Date.now();
     // Accepts "adidaphat", "A Di Đà Phật", "adi da phat 🙏", "Nam mô a di đà phật"...
-    const isAdidaphat = commentText
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[đĐ]/g, 'd')
-      .toLowerCase()
-      .replace(/[^a-z]/g, '')
-      .includes('adidaphat');
+    // The keyword (default "adidaphat") matches without accents, spaces or case: "A Di Đà Phật" counts too
+    const isAdidaphat = lettersOnly(commentText).includes(lettersOnly(config.keyword || DEFAULT_KEYWORD) || DEFAULT_KEYWORD);
 
     const newComment: CommentEvent = {
       id: `c-${now}`,
@@ -437,6 +460,13 @@ export default function App() {
   }, [config.autoTts]);
 
   // Dashboard buttons drive the live stage page, which is the one that makes sound
+  const uploadBackground = async (file: File) => {
+    const res = await fetch('/api/background', { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
+    const result = await res.json().catch(() => ({ success: false }));
+    if (!result.success) throw new Error(result.error || 'Không tải được ảnh');
+  };
+  const resetBackground = () => fetch('/api/background/reset', { method: 'POST' }).catch(() => {});
+
   const sendControl = (action: string, text?: string) => {
     fetch('/api/control', {
       method: 'POST',
@@ -452,6 +482,10 @@ export default function App() {
       setConfig((prev) => ({ ...prev, channelName: text }));
       soundEngine.setChannelName(text);
     }
+    if (action === 'setTopBoard') setConfig((prev) => ({ ...prev, showTopBoard: text !== '0' }));
+    if (action === 'setKeyword' && text) setConfig((prev) => ({ ...prev, keyword: text }));
+    if (action === 'setBoardTitle' && text) setConfig((prev) => ({ ...prev, boardTitle: text }));
+    if (action === 'setBackground') setConfig((prev) => ({ ...prev, background: text || '' }));
     if (!isStandaloneObs) return;
     if (action === 'speak' && text) soundEngine.speakNow(text);
     if (action === 'shareReminder') remindShare();
@@ -483,7 +517,18 @@ export default function App() {
       gift: (name: string, coins: number, avatar = '') =>
         handlersRef.current.handleTriggerGift('dang_hoa_sen', 'Hoa Hồng', 'Cầu bình an', name, 1, coins, avatar),
       comment: (name: string, text: string) => handlersRef.current.handleAddComment(name, text),
+      like: (count: number) => handlersRef.current.addLikes(count),
     };
+    // &fill=1: a sample scene for screenshots (top 6 on the cushions, named viewers in the hall), no voice
+    if (new URLSearchParams(window.location.search).get('fill') !== '1') return;
+    const top = ['Hồng Phúc', 'Angela', 'Hậu 84', 'Yêu Mọi Người', 'Lu Lu', 'Cong Chu', 'Phúc Dương', 'Như Huỳnh'];
+    top.forEach((name, i) => addMerit(name, 120 - i * 13));
+    const hall = [
+      'Minh An', 'Thu Hà', 'Quốc Bảo', 'Lan Chi', 'Tuấn Kiệt', 'Ngọc Mai', 'Hoàng Nam', 'Bảo Ngọc', 'Gia Huy', 'Thanh Tâm',
+      'Kim Ngân', 'Đức Anh', 'Mỹ Linh', 'Văn Hùng', 'Hải Yến', 'Phương Thảo', 'Trọng Nghĩa', 'Diệu Linh', 'Khánh Vy', 'Minh Khôi',
+      'Thùy Dung', 'Quang Huy', 'Bích Ngọc', 'Tấn Phát', 'Hồng Nhung', 'Anh Thư', 'Đăng Khoa', 'Ngọc Hân', 'Trung Kiên', 'Cẩm Tú',
+    ];
+    hall.forEach((name) => addOrUpdateDevotee(name, () => ({})));
   }, []);
 
   const handlersRef = useRef({ handleTriggerGift, handleAddComment, handleFollow, handleControl, handleJoin, addLikes });
@@ -690,6 +735,8 @@ export default function App() {
         {/* Stage is laid out at 430px wide; zoom it to fill the 1080x1920 capture */}
         <div className="w-[430px] flex flex-col justify-center" style={{ zoom: stageZoom }}>
           <ChanhDienStage
+            fortuneProgress={fortuneProgress}
+            fortuneDraws={fortuneDraws}
             onSpotlightStart={readPendingThanks}
             spotlightRequests={spotlightRequests}
             likeProgress={likeProgress}
@@ -726,6 +773,8 @@ export default function App() {
             <div className="lg:col-span-5 flex justify-center">
               <div className="w-full max-w-[430px]">
                 <ChanhDienStage
+                  fortuneProgress={fortuneProgress}
+                  fortuneDraws={fortuneDraws}
                   onSpotlightStart={readPendingThanks}
                   spotlightRequests={spotlightRequests}
                   likeProgress={likeProgress}
@@ -750,6 +799,10 @@ export default function App() {
             <div className="lg:col-span-7 h-[780px]">
               <StreamerDeck
                 config={config}
+                onToggleTopBoard={(show) => sendControl('setTopBoard', show ? '1' : '0')}
+                onSaveSetting={(action: string, value: string) => sendControl(action, value)}
+                onUploadBackground={uploadBackground}
+                onResetBackground={resetBackground}
                 onSaveChannelName={(name) => sendControl('setName', name)}
                 onUpdateConfig={(updates) => setConfig((prev) => ({ ...prev, ...updates }))}
                 tikTokStatus={tikTokStatus}
@@ -762,6 +815,8 @@ export default function App() {
           <div className="flex-1 flex items-center justify-center py-2">
             <div className="w-full max-w-[430px]">
               <ChanhDienStage
+                fortuneProgress={fortuneProgress}
+                fortuneDraws={fortuneDraws}
                 onSpotlightStart={readPendingThanks}
                 spotlightRequests={spotlightRequests}
                 likeProgress={likeProgress}
@@ -785,6 +840,10 @@ export default function App() {
           <div className="flex-1 max-w-4xl mx-auto w-full h-[780px]">
             <StreamerDeck
               config={config}
+              onToggleTopBoard={(show) => sendControl('setTopBoard', show ? '1' : '0')}
+              onSaveSetting={(action: string, value: string) => sendControl(action, value)}
+              onUploadBackground={uploadBackground}
+              onResetBackground={resetBackground}
               onSaveChannelName={(name) => sendControl('setName', name)}
               onUpdateConfig={(updates) => setConfig((prev) => ({ ...prev, ...updates }))}
               tikTokStatus={tikTokStatus}

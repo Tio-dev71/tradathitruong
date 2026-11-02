@@ -2,14 +2,16 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TempleLightingEffects } from './TempleLightingEffects';
 import { CompactBangCongDuc } from './CompactBangCongDuc';
 import { DevoteeCrowd, SEATS } from './DevoteeCrowd';
-import { OfferingArea, TOP10_SEATS } from './OfferingArea';
+import { OfferingArea, TOP_SEATS } from './OfferingArea';
 import { Temple3D } from '../three/Temple3D';
 import type { ActorSpec } from '../three/templeScene';
 import { GiftNotificationBanner } from './GiftNotificationBanner';
 import { GoldenLotusBloom } from './GoldenLotusBloom';
-import { FlowerRain, LikeBar } from './LikeRain';
+import { FlowerRain, FortuneBar, LikeBar } from './LikeRain';
 import { CraneFlight } from './CraneFlight';
 import { SpotlightCard } from './SpotlightCard';
+import { FortuneCard, FortuneDraw } from './FortuneCard';
+import { FortuneBox } from './FortuneBox';
 import { LIKES_PER_RAIN } from '../services/likeRain';
 import {
   Devotee,
@@ -35,7 +37,9 @@ interface ChanhDienStageProps {
   likeProgress?: number; // likes toward the next flower rain
   rainUntil?: number; // flower rain lasts until this time (ms)
   spotlightRequests?: OfferRequest[]; // gift givers the camera follows up close
-  onSpotlightStart?: (username: string) => void; // read their name and blessing as the close-up begins
+  onSpotlightStart?: (username: string) => void;
+  fortuneDraws?: FortuneDraw[]; // quẻ drawn every 99 hearts from the room, shown one at a time
+  fortuneProgress?: number; // hearts toward the next quẻ // read their name and blessing as the close-up begins
 }
 
 const MAX_AT_BURNER = 5; // up to five people light incense together (5 spots at the burner), the rest wait in line
@@ -57,6 +61,8 @@ export const ChanhDienStage: React.FC<ChanhDienStageProps> = ({
   rainUntil = 0,
   spotlightRequests = [],
   onSpotlightStart,
+  fortuneDraws = [],
+  fortuneProgress = 0,
 }) => {
   // Re-render when a flower rain ends so the like bar switches back to counting
   const [raining, setRaining] = useState(false);
@@ -126,11 +132,11 @@ export const ChanhDienStage: React.FC<ChanhDienStageProps> = ({
       offering.delete(username);
       return { offer: o.id, label: { name: o.displayName || o.username, avatar: o.avatarUrl || undefined } };
     };
-    // Top 10 kneel on the ten cushions
-    const top = leaderboardDonors.slice(0, TOP10_SEATS.length);
+    // Top 6 kneel on the row of cushions
+    const top = leaderboardDonors.slice(0, TOP_SEATS.length);
     top.forEach((d, i) => {
       const key = `top-${d.username}`;
-      list.push({ key, at: TOP10_SEATS[i], mode: 'pray', enter: 'walk', label: { name: d.displayName || d.username, avatar: d.avatarUrl }, ...offerFor(key, d.username) });
+      list.push({ key, at: TOP_SEATS[i], mode: 'pray', enter: 'walk', label: { name: d.displayName || d.username, avatar: d.avatarUrl }, ...offerFor(key, d.username) });
     });
     // Everyone else in the rows at the bottom; an offerer leaves their seat, offers incense and comes back
     const bySeat = new Map(devotees.map((d) => [(d.seat ?? 0) % SEATS.length, d]));
@@ -204,7 +210,9 @@ export const ChanhDienStage: React.FC<ChanhDienStageProps> = ({
   };
 
   // Exact background path uploaded by the user
-  const templeBgUrl = '/assets/bg/chanh-dien-2-hd.webp'; // AI-upscaled (Real-ESRGAN x4) from chanh-dien-2.webp
+  // The owner's uploaded background, or the built-in hall painting (AI-upscaled from chanh-dien-2.webp)
+  const templeBgUrl = config.background || '/assets/bg/chanh-dien-2-hd.webp';
+  const closeUpBgUrl = config.background || '/assets/bg/chanh-dien-2-4k.webp';
 
   return (
     <div
@@ -224,7 +232,7 @@ export const ChanhDienStage: React.FC<ChanhDienStageProps> = ({
         />
         {/* 4K copy (the full AI upscale) shown only while the camera is close on a gift giver, so the hall stays sharp */}
         <img
-          src="/assets/bg/chanh-dien-2-4k.webp"
+          src={closeUpBgUrl}
           alt=""
           decoding="async"
           className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700"
@@ -243,14 +251,19 @@ export const ChanhDienStage: React.FC<ChanhDienStageProps> = ({
       />
 
       {/* 3. TOP THÀNH TÂM (merit board) under the adidaphat hint */}
-      <CompactBangCongDuc topDonors={leaderboardDonors} />
+      <CompactBangCongDuc
+        topDonors={leaderboardDonors}
+        showBoard={config.showTopBoard !== false}
+        keyword={config.keyword || 'adidaphat'}
+        title={config.boardTitle || 'TOP THÀNH TÂM'}
+      />
 
       {/* 4. GIFT: golden lotus opens and pink lotus petals fall, bigger and brighter for bigger gifts */}
       <GoldenLotusBloom giftId={currentGift?.id} diamonds={currentGift?.diamonds} />
 
       {/* Notice scrolling in a thin strip under the like bar (the channel owner's wording) */}
-      <div className="absolute top-[20.3%] left-[8%] right-[8%] z-30 overflow-hidden pointer-events-none rounded-full bg-black/35 border border-[#c9973f]/40">
-        <div className="w-max whitespace-nowrap py-0.5 text-[9px] text-[#f3d08a]/90 font-temple animate-notice-scroll">
+      <div className="absolute top-[23.4%] left-[8%] right-[8%] z-30 overflow-hidden pointer-events-none rounded-full bg-black/35 border border-[#c9973f]/40">
+        <div className="w-max whitespace-nowrap py-1 text-[11.5px] text-[#f3d08a] font-temple animate-notice-scroll">
           Xin lưu ý, đây là không gian thư giãn mang tinh thần an nhiên; quà tặng chỉ để nhận lời chúc, không phải tiền cúng dường hay để cầu may.
         </div>
       </div>
@@ -270,6 +283,7 @@ export const ChanhDienStage: React.FC<ChanhDienStageProps> = ({
 
       {/* Likes toward the next flower rain, under the chant */}
       <LikeBar progress={likeProgress} goal={LIKES_PER_RAIN} raining={raining} />
+      <FortuneBar progress={fortuneProgress} goal={99} />
       <FlowerRain until={rainUntil} />
       <CraneFlight />
 
@@ -321,6 +335,8 @@ export const ChanhDienStage: React.FC<ChanhDienStageProps> = ({
       </div>
 
       <SpotlightCard person={spotPerson} />
+      <FortuneCard draws={fortuneDraws} />
+      <FortuneBox drawId={fortuneDraws[fortuneDraws.length - 1]?.id} />
 
       {/* 8. GIFT NOTIFICATION BANNER WITH COMBO MULTIPLIER */}
       <GiftNotificationBanner currentGift={currentGift} />

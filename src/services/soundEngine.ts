@@ -672,6 +672,12 @@ class SoundEngine {
   /**
    * Thank a new follower (once per user per session)
    */
+  // Gieo quẻ for the whole room: the quẻ's number and name, then its words (normal queue, after gift thanks)
+  public readFortune(fortune: { so: number; ten: string; loi: string }) {
+    this.speakPreferredBuddhistVoice(`Cả nhà vừa thả đủ 99 tim, gieo được quẻ số ${fortune.so}, quẻ ${fortune.ten}.`);
+    this.speakPreferredBuddhistVoice(fortune.loi);
+  }
+
   public readFollowThanks(username: string) {
     const key = `follow_${username.trim().toLowerCase()}`;
     if (this.lastGiftAckMap.has(key)) return;

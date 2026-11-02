@@ -8,6 +8,7 @@ import {
 } from '../types/temple';
 import { soundEngine } from '../services/soundEngine';
 import { LiveControlPanel } from './LiveControlPanel';
+import { StageSettingsPanel } from './StageSettingsPanel';
 
 // Link for the TikTok LIVE Studio / OBS "Link" source. LIVE Studio refuses plain localhost, so it goes through
 // lvh.me, a public name that points back to this computer (127.0.0.1); vite.config.ts allows that host.
@@ -20,6 +21,10 @@ interface StreamerDeckProps {
   onConnectTikTok?: (username: string) => void;
   onDisconnectTikTok?: () => void;
   onSaveChannelName?: (name: string) => void;
+  onToggleTopBoard?: (show: boolean) => void;
+  onSaveSetting?: (action: 'setKeyword' | 'setBoardTitle', value: string) => void;
+  onUploadBackground?: (file: File) => Promise<void>;
+  onResetBackground?: () => void;
 }
 
 export const StreamerDeck: React.FC<StreamerDeckProps> = ({
@@ -29,6 +34,10 @@ export const StreamerDeck: React.FC<StreamerDeckProps> = ({
   onConnectTikTok,
   onDisconnectTikTok,
   onSaveChannelName,
+  onToggleTopBoard,
+  onSaveSetting,
+  onUploadBackground,
+  onResetBackground,
 }) => {
   const [activeTab, setActiveTab] = useState<'tiktok_obs' | 'audio'>('tiktok_obs');
   const [tiktokUsernameInput, setTiktokUsernameInput] = useState(tikTokStatus?.username || '');
@@ -84,6 +93,18 @@ export const StreamerDeck: React.FC<StreamerDeckProps> = ({
           >
             {nameSaved ? 'Đã lưu' : 'Lưu'}
           </button>
+          {/* Show or hide the TOP THÀNH TÂM board on the live stage */}
+          <button
+            role="switch"
+            aria-checked={config.showTopBoard !== false}
+            onClick={() => onToggleTopBoard?.(config.showTopBoard === false)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
+              config.showTopBoard !== false ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-stone-800 hover:bg-stone-700 text-stone-300'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${config.showTopBoard !== false ? 'bg-white' : 'bg-stone-500'}`} />
+            Bảng TOP: {config.showTopBoard !== false ? 'Bật' : 'Tắt'}
+          </button>
         </div>
       </div>
 
@@ -133,6 +154,8 @@ export const StreamerDeck: React.FC<StreamerDeckProps> = ({
           <div className="space-y-4">
             <LiveControlPanel />
 
+            <StageSettingsPanel config={config} onSaveSetting={onSaveSetting} onUploadBackground={onUploadBackground} onResetBackground={onResetBackground} />
+
             {/* 1. REAL TIKTOK LIVE CONNECTOR BOX */}
             <div className="p-4 rounded-xl bg-gradient-to-br from-stone-900/90 to-stone-950 border border-amber-500/30 shadow-lg space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-stone-800">
@@ -143,7 +166,7 @@ export const StreamerDeck: React.FC<StreamerDeckProps> = ({
                       Kết Nối Phòng Live TikTok Thật (Webcast Real-time)
                     </h4>
                     <p className="text-[11px] text-stone-400">
-                      Bắt comment "adidaphat", quà tặng và người xem trực tiếp từ TikTok
+                      Bắt comment, quà tặng và người xem trực tiếp từ TikTok
                     </p>
                   </div>
                 </div>

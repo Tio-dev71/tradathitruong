@@ -15,6 +15,21 @@ export const LikeBar: React.FC<{ progress: number; goal: number; raining: boolea
   </div>
 );
 
+// Second, thinner bar under it: every `goal` hearts from the room draws one quẻ (for fun) for everyone
+export const FortuneBar: React.FC<{ progress: number; goal: number }> = ({ progress, goal }) => (
+  <div className="absolute top-[19.8%] left-1/2 -translate-x-1/2 w-[60%] z-30 pointer-events-none select-none font-temple">
+    <div className="relative h-2.5 rounded-full border border-[#c9973f]/70 bg-black/45 overflow-hidden">
+      <div
+        className="absolute inset-y-0 left-0 rounded-full bg-linear-to-r from-amber-500 via-amber-300 to-yellow-100 transition-[width] duration-200"
+        style={{ width: `${Math.min(100, (progress / goal) * 100)}%` }}
+      />
+      <div className="absolute inset-0 flex items-center justify-center text-[6.5px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+        🎋 {progress}/{goal} tim · Đủ tim gieo quẻ cho cả nhà
+      </div>
+    </div>
+  </div>
+);
+
 // Pink lotus petals falling over the whole hall until `until` (ms timestamp)
 export const FlowerRain: React.FC<{ until: number }> = ({ until }) => {
   const [on, setOn] = useState(until > Date.now());

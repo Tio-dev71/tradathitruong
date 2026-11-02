@@ -7,7 +7,7 @@ export const SpotlightCard: React.FC<{ person: { id: string; name: string; avata
     {person && (
       <motion.div
         key={person.id}
-        className="absolute left-1/2 top-[24.5%] -translate-x-1/2 z-[60] pointer-events-none select-none font-temple"
+        className="absolute left-1/2 top-[27%] -translate-x-1/2 z-[60] pointer-events-none select-none font-temple"
         initial={{ opacity: 0, y: 16, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -10 }}

@@ -10,17 +10,34 @@ interface DevoteeCrowdProps {
   labelsOnly?: boolean; // 3D layer draws the people; keep only chat bubbles here
 }
 
-// Seats in stage % (x = center, y = feet line) for everyone else: six close rows at the bottom of the hall,
-// packed up to a narrow walkway down the middle, just wide enough for one person (it widens a little toward the camera).
-// Top donors kneel further up on their cushions (OfferingArea). The front row fills first.
-const ROWS_Y = [86.8, 89.2, 91.6, 94, 96.4, 98.8];
-const SEAT_STEP_X = 4.6;
-export const SEATS = ROWS_Y.flatMap((y) => {
-  const inner = 4 + (y - 88) * 0.15; // half the walkway: just room for one person to walk down the middle
-  const row: Array<{ x: number; y: number }> = [];
-  for (let x = 50 - inner; x >= 4; x -= SEAT_STEP_X) row.push({ x, y }, { x: 100 - x, y });
-  return row;
-});
+// Seats in stage % (x = center, y = feet line) for everyone else: a packed, untidy crowd on both sides of a
+// narrow walkway down the middle (just room for one person; it widens a little toward the camera). Rows are
+// staggered and every spot is nudged a little at random, so nobody lines up and people overlap like a busy
+// courtyard. The jitter is seeded, so seats stay put between reloads. The top 6 kneel in front on cushions.
+const CROWD_ROWS_Y = [83.5, 85.8, 88.1, 90.4, 92.7, 95, 97.3];
+const SEAT_STEP_X = 4.2;
+const seeded = (seed: number) => () => {
+  seed = (seed + 0x6d2b79f5) | 0;
+  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+export const SEATS = (() => {
+  const rand = seeded(20261101);
+  const seats: Array<{ x: number; y: number }> = [];
+  CROWD_ROWS_Y.forEach((rowY, r) => {
+    const inner = 4 + (rowY - 88) * 0.15; // half the walkway
+    for (let x = 50 - inner - (r % 2 ? SEAT_STEP_X / 2 : 0); x >= 3; x -= SEAT_STEP_X) {
+      for (const side of [-1, 1]) {
+        const y = rowY + (rand() - 0.5) * 1.4;
+        // nudge sideways, but never into the walkway
+        const offset = Math.max(inner, 50 - x + (rand() - 0.5) * 2.6);
+        seats.push({ x: 50 + side * offset, y });
+      }
+    }
+  });
+  return seats;
+})();
 // Farther rows (higher on screen) are smaller
 const widthAt = (y: number) => `${6.5 * (0.62 + ((y - 70) / 30) * 0.42)}%`;
 const WALK_MS = 3500;
@@ -48,14 +65,10 @@ const Viewer: React.FC<{ devotee: Devotee; isVip: boolean; prayerText: string | 
       transition={{ duration: WALK_MS / 1000, times: [0, 0.75, 1], ease: 'easeInOut' }}
       onAnimationComplete={() => setArrived(true)}
     >
-      {/* No name tag in the rows: their TikTok avatar over the head (initial when there is none), and what they say above it */}
+      {/* Their TikTok name over the head (short, so a packed crowd stays readable), what they say above it */}
       {arrived && (
-        <div className="absolute bottom-full mb-0.5 w-[34%] max-w-[18px] aspect-square rounded-full border border-[#d9a55a] bg-[#b07a3a] overflow-hidden shadow-[0_0_5px_rgba(217,165,90,0.6)] flex items-center justify-center text-[7px] font-bold text-[#fff7e0]">
-          {devotee.avatarUrl ? (
-            <img src={devotee.avatarUrl} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-          ) : (
-            devotee.displayName.slice(0, 1).toUpperCase()
-          )}
+        <div className="absolute bottom-full mb-0.5 w-max max-w-[44px] truncate px-1 rounded-full bg-[#2a1608]/80 border border-[#d9a55a]/70 text-[5.5px] leading-[9px] font-semibold text-[#fbe7b8] font-temple">
+          {devotee.displayName}
         </div>
       )}
       {prayerText && (!labelsOnly || arrived) && (

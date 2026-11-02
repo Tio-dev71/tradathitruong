@@ -62,7 +62,7 @@ app.get('/api/tiktok/events', (req, res) => {
   res.write(`event: status\ndata: ${JSON.stringify(liveStats)}\n\n`);
   if (lastRateControl) res.write(`event: control\ndata: ${JSON.stringify(lastRateControl)}\n\n`);
 
-  if (lastNameControl) res.write(`event: control\ndata: ${JSON.stringify(lastNameControl)}\n\n`);
+  for (const c of settingsControls()) res.write(`event: control\ndata: ${JSON.stringify(c)}\n\n`);
   sseClients.push(res);
 
   // Keep-alive heartbeat every 20s
@@ -228,6 +228,7 @@ app.post('/api/tiktok/connect', async (req, res) => {
       }
       broadcastSSE('like', {
         username: data?.user?.displayId || data?.user?.uniqueId || data?.uniqueId || '',
+        nickname: data?.user?.nickname || data?.nickname || '',
         likeCount: data?.likeCount || 1,
         totalLikes: liveStats.totalLikes,
       });
@@ -275,17 +276,42 @@ app.post('/api/tiktok/connect', async (req, res) => {
 });
 
 // Streamer commands from the dashboard, relayed to the live stage page(s) that make the sound
-const CONTROL_ACTIONS = ['speak', 'shareReminder', 'bell', 'setRate', 'setName'];
+const CONTROL_ACTIONS = ['speak', 'shareReminder', 'bell', 'setRate', 'setName', 'setTopBoard', 'setKeyword', 'setBoardTitle'];
 
-// The channel name (title + what the voice says) survives restarts in settings.json next to this file
+// Dashboard settings that survive restarts, in settings.json next to this file: channel name (title + what the
+// voice says), TOP board on/off, the comment keyword that sends someone up, the board's title and a custom
+// background. Replayed to every page when it connects.
 const SETTINGS_FILE = path.join(process.cwd(), 'settings.json');
-let lastNameControl: { action: string; text: string } | null = null;
+let settings: {
+  channelName?: string;
+  showTopBoard?: boolean;
+  keyword?: string;
+  boardTitle?: string;
+  background?: string;
+} = {};
 try {
-  const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-  if (typeof saved.channelName === 'string' && saved.channelName.trim()) lastNameControl = { action: 'setName', text: saved.channelName.trim() };
+  settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
 } catch {
-  // no settings yet: the app's default name is used
+  // no settings yet: the app's defaults are used
 }
+const settingsControls = () => {
+  const list: Array<{ action: string; text: string }> = [];
+  if (settings.channelName) list.push({ action: 'setName', text: settings.channelName });
+  if (typeof settings.showTopBoard === 'boolean') list.push({ action: 'setTopBoard', text: settings.showTopBoard ? '1' : '0' });
+  if (settings.keyword) list.push({ action: 'setKeyword', text: settings.keyword });
+  if (settings.boardTitle) list.push({ action: 'setBoardTitle', text: settings.boardTitle });
+  if (settings.background) list.push({ action: 'setBackground', text: settings.background });
+  return list;
+};
+// Plain text only: no control characters, trimmed to `max` characters
+const cleanText = (text: string | undefined, max: number) => (text || '').replace(/[\x00-\x1f\x7f]/g, '').trim().slice(0, max);
+const saveSettings = () => {
+  try {
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+  } catch (err) {
+    console.error('Could not save settings.json:', err);
+  }
+};
 // Last voice speed from the dashboard, replayed to stage pages that (re)load later
 let lastRateControl: { action: string; text: string } | null = null;
 app.post('/api/control', (req, res) => {
@@ -299,19 +325,65 @@ app.post('/api/control', (req, res) => {
   const payload = { action, text: typeof text === 'string' ? text.trim().slice(0, 1000) : undefined };
   if (action === 'setRate' && payload.text) lastRateControl = { action, text: payload.text };
   if (action === 'setName') {
-    // Plain name only: no control characters, at most 40 characters
-    const name = (payload.text || '').replace(/[\x00-\x1f\x7f]/g, '').trim().slice(0, 40);
+    const name = cleanText(payload.text, 40);
     if (!name) return res.status(400).json({ success: false, error: 'Chưa nhập tên kênh' });
-    payload.text = name;
-    lastNameControl = { action, text: name };
-    try {
-      fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ channelName: name }, null, 2));
-    } catch (err) {
-      console.error('Could not save settings.json:', err);
-    }
+    payload.text = settings.channelName = name;
+    saveSettings();
+  }
+  if (action === 'setTopBoard') {
+    payload.text = payload.text === '0' ? '0' : '1';
+    settings.showTopBoard = payload.text === '1';
+    saveSettings();
+  }
+  if (action === 'setKeyword') {
+    const keyword = cleanText(payload.text, 30);
+    if (!keyword) return res.status(400).json({ success: false, error: 'Chưa nhập từ khóa' });
+    payload.text = settings.keyword = keyword;
+    saveSettings();
+  }
+  if (action === 'setBoardTitle') {
+    const title = cleanText(payload.text, 24);
+    if (!title) return res.status(400).json({ success: false, error: 'Chưa nhập tên bảng' });
+    payload.text = settings.boardTitle = title;
+    saveSettings();
   }
   broadcastSSE('control', payload);
   return res.json({ success: true, stages: sseClients.length });
+});
+
+// Custom background: the dashboard uploads one image (JPG, PNG or WebP, up to 15 MB). It is kept in uploads/
+// next to this file (gitignored), replaces the previous custom one, and every page switches to it.
+const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
+const IMAGE_TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+app.use('/uploads', express.static(UPLOAD_DIR));
+const removeCustomBackground = () => {
+  if (!settings.background) return;
+  try {
+    fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(settings.background)));
+  } catch {
+    // already gone
+  }
+};
+app.post('/api/background', express.raw({ type: Object.keys(IMAGE_TYPES), limit: '15mb' }), (req, res) => {
+  const ext = IMAGE_TYPES[(req.headers['content-type'] || '').split(';')[0].trim()];
+  if (!ext || !Buffer.isBuffer(req.body) || !req.body.length) {
+    return res.status(400).json({ success: false, error: 'Chỉ nhận ảnh JPG, PNG hoặc WebP' });
+  }
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  removeCustomBackground();
+  const file = `background-${Date.now()}.${ext}`;
+  fs.writeFileSync(path.join(UPLOAD_DIR, file), req.body);
+  settings.background = `/uploads/${file}`;
+  saveSettings();
+  broadcastSSE('control', { action: 'setBackground', text: settings.background });
+  return res.json({ success: true, url: settings.background });
+});
+app.post('/api/background/reset', (_req, res) => {
+  removeCustomBackground();
+  delete settings.background;
+  saveSettings();
+  broadcastSSE('control', { action: 'setBackground', text: '' });
+  return res.json({ success: true });
 });
 
 // Disconnect route

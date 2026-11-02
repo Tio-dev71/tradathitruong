@@ -49,6 +49,10 @@ export interface LeaderboardEntry {
 
 export interface StreamConfig {
   channelName: string;
+  showTopBoard?: boolean; // TOP THÀNH TÂM board on the stage (dashboard switch, saved on the server)
+  keyword?: string; // comment word that sends a viewer up to offer incense (default "adidaphat")
+  boardTitle?: string; // title of the top board (default "TOP THÀNH TÂM")
+  background?: string; // uploaded background image URL; empty = the built-in hall painting
   liveTitle: string; // "TÂM TỊNH TÂM AN"
   subTitle: string; // 'Gõ "adidaphat" để vào lễ Phật'
   isConnected: boolean;

@@ -60,8 +60,17 @@ const AISLE_BOTTOM_Y = 106;
 // Offerers stand in a row partway up the steps (not up at the burner table),
 // spread wide so five fit without crowding: x offsets from the aisle, in the order spots are filled
 const SPOT_ZOOM = 3.6; // how close the camera gets on a gift giver
-const OFFER_ROW_Y = 66.5; // partway up the steps (user-marked height)
-const OFFER_SPOTS_X = [0, -8, 8, -16, 16];
+// Two staggered rows partway up the steps so name plates don't stack: filled in this order, giving
+// 1 front, then 1 front + 1 back, 1 front + 2 back, 2 front + 2 back, 2 front + 3 back.
+const OFFER_FRONT_Y = 68;
+const OFFER_BACK_Y = 63.5;
+const OFFER_SPOTS = [
+  { dx: 0, y: OFFER_FRONT_Y },
+  { dx: -9, y: OFFER_BACK_Y },
+  { dx: 9, y: OFFER_BACK_Y },
+  { dx: 12, y: OFFER_FRONT_Y },
+  { dx: -18, y: OFFER_BACK_Y },
+];
 
 // Files exported from Mixamo into public/assets/3d/: di (walk, in place) and khan (kneeling idle) are required;
 // quy (stand to kneel) and thaphuong (stand praying then kneel, for lighting incense) are optional.
@@ -642,11 +651,12 @@ export class TempleScene {
     actor.onDone = () => this.onAway(spec.key, false);
     this.onAway(spec.key, true);
     const aisleAtSeat = this.toWorld({ x: AISLE_X, y: spec.at.y });
-    // Up to five offer at once, each on their own spot in a row at the foot of the steps (first free spot)
+    // Up to five offer at once, each on their own spot (first free one) in the staggered rows
     const taken = new Set([...this.actors.values()].filter((a) => a !== actor && a.busy).map((a) => a.spotIndex));
-    actor.spotIndex = OFFER_SPOTS_X.findIndex((_, i) => !taken.has(i));
-    const spot = { x: AISLE_X + OFFER_SPOTS_X[Math.max(0, actor.spotIndex)], y: OFFER_ROW_Y };
-    const aisleFront = this.toWorld({ x: AISLE_X, y: OFFER_ROW_Y + 2.5 });
+    actor.spotIndex = OFFER_SPOTS.findIndex((_, i) => !taken.has(i));
+    const s = OFFER_SPOTS[Math.max(0, actor.spotIndex)];
+    const spot = { x: AISLE_X + s.dx, y: s.y };
+    const aisleFront = this.toWorld({ x: AISLE_X, y: OFFER_FRONT_Y + 2.5 });
     const toBurner = [aisleAtSeat, aisleFront, this.toWorld(spot)];
     const back = spec.leave
       ? [aisleFront, this.toWorld({ x: AISLE_X, y: AISLE_BOTTOM_Y })]
