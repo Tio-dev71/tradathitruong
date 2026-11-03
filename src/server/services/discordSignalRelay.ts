@@ -186,19 +186,33 @@ export class DiscordSignalRelayService {
       };
     }
 
+    const VIP_CHANNELS = new Set([
+      '1450669768884617247', // XAU / Vàng
+      '1416343865752817664', // BTC (Low TF)
+      '1418660997425528973', // ETH (High TF)
+    ]);
+
+    const isVipChannel = payload.channel_id && VIP_CHANNELS.has(payload.channel_id);
+    const isVipSymbol = /XAU|GOLD|BTC|ETH/i.test(parsedSignal.symbol || '');
+    const isM1 = payload.channel_id === '1428795313014968522' || parsedSignal.timeframe?.toLowerCase() === 'm1';
+
+    const tier: 'VIP' | 'M1' = (isVipChannel || (isVipSymbol && !isM1)) ? 'VIP' : 'M1';
+
     const now = Date.now();
     const finalSignal: SignalData = {
-      id: `sig_discord_${Date.now()}`,
+      id: `sig_discord_${now}_${Math.random().toString(36).substring(2, 7)}`,
       symbol: parsedSignal.symbol,
       market: parsedSignal.market || 'CRYPTO',
       direction: parsedSignal.direction,
       entry: parsedSignal.entry || 'Thị giá',
       stopLoss: parsedSignal.stopLoss || 'Cắt lỗ kỹ thuật',
       takeProfit: parsedSignal.takeProfit || ['Chốt lời R:R 1:2'],
-      timeframe: parsedSignal.timeframe || 'm1',
-      note: parsedSignal.note || 'Tín hiệu trực tiếp từ bot Discord TradingView',
-      source: 'Trading-Bot_TLS1 (Discord VIP)',
+      timeframe: parsedSignal.timeframe || (isM1 ? 'm1' : '15m'),
+      note: parsedSignal.note || (tier === 'VIP' ? 'Kèo VIP winrate cao (Phòng Vàng/BTC/ETH)' : 'Kèo lướt nhanh phòng M1 Scalp'),
+      source: tier === 'VIP' ? 'Trading-Bot (VIP Vàng/BTC/ETH)' : 'Trading-Bot (M1 Scalp)',
       isDemo: false,
+      channelId: payload.channel_id || undefined,
+      tier,
       createdAt: now,
       expiresAt: now + 2 * 3600 * 1000, // 2 hours
       status: 'ACTIVE',
@@ -212,14 +226,18 @@ export class DiscordSignalRelayService {
       this.io.emit('signal:new', finalSignal);
 
       // System announcement in chat
-      this.io.emit('chat:message', {
+      const chatAnnouncement = tier === 'VIP'
+        ? `🔥 [KÈO VIP XỊN] ${finalSignal.symbol} [${finalSignal.direction}] từ phòng VIP! Uống trà tích duyên để Bà Bán Trà soi sổ tay cho nhé!`
+        : `⚡ [KÈO LƯỚT M1] ${finalSignal.symbol} [${finalSignal.direction}] từ phòng Scalp! Kèo nhanh cho anh em thích lướt sóng!`;
+
+      this.io.emit('chat:received', {
         id: 'sig_ann_' + Date.now(),
-        playerId: 'system',
-        nickname: 'Quán Trà Đá',
-        role: 'Nhà Tiên Tri Nến',
-        text: `⚡ KÈO VIP MỚI TỪ BOT TRADING: [${finalSignal.direction}] ${finalSignal.symbol} (Entry: ${finalSignal.entry} | TP: ${finalSignal.takeProfit.join(', ')} | SL: ${finalSignal.stopLoss})! Ra xin bà hoặc thầy để nhận chi tiết!`,
+        senderId: 'SYSTEM',
+        senderName: 'Hội Quán Trà Đá',
+        senderRole: 'Trà Quán',
+        content: chatAnnouncement,
         timestamp: Date.now(),
-        isSystem: true,
+        type: 'system',
       });
 
       // If it's a Gold Signal, trigger immediate update for Tiệm Vàng DJN billboard

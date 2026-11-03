@@ -84,11 +84,26 @@ export class SignalDecisionService {
       };
     }
 
-    // 80% Case: Bà đồng ý
-    const provider = signalProviderManager.getActiveProvider();
-    const signal = await provider.getAvailableSignal(role);
+    // Cơ chế phân loại Kèo VIP (60/40) vs Kèo M1 (Scalp) theo lượng trà đá đã uống:
+    // 3 phòng VIP (1450669768884617247, 1416343865752817664, 1418660997425528973: Vàng, BTC, ETH)
+    // Tỷ lệ cơ bản: 60% cho kèo VIP, 40% không cho (hoặc chưa đủ duyên) thì cho phòng M1 (1428795313014968522 - winrate thấp hơn)
+    // Càng uống nhiều trà đá (teaCount), tỷ lệ được thưởng KÈO VIP càng tăng cao (+5% mỗi chén)
+    const baseVipRate = 0.60;
+    const vipChance = Math.min(0.95, baseVipRate + teaCount * 0.05);
+    const isVipAwarded = crypto.randomInt(0, 10000) < Math.round(vipChance * 10000);
 
-    let npcQuote = dialogueService.getSignalAcceptQuote();
+    const provider = signalProviderManager.getActiveProvider();
+    const signalTier: 'VIP' | 'M1' = isVipAwarded ? 'VIP' : 'M1';
+    const signal = await provider.getAvailableSignal(role, signalTier);
+
+    let npcQuote = '';
+    if (signalTier === 'VIP') {
+      npcQuote = teaCount > 0
+        ? `Cháu uống ${teaCount} chén trà rồi, người hiểu chuyện! Đây là KÈO VIP [${signal?.symbol || 'VÀNG/BTC/ETH'}] tỷ lệ thắng cao cô giấu kỹ dưới đáy ấm trà, cất vào ví cẩn thận nhé!`
+        : `Có duyên gặp gỡ! Cô mở sổ tay chia sẻ cho cháu KÈO VIP [${signal?.symbol || 'VÀNG/BTC/ETH'}] tỷ lệ thắng cao này nhé, đánh chuẩn kỷ luật vào!`;
+    } else {
+      npcQuote = `Kèo VIP Vàng với BTC cô giữ cho khách quen uống nhiều trà! Hôm nay tạm cho cháu KÈO LƯỚT M1 này ở phòng Scalp, winrate thấp hơn nên nhớ ăn non chạy lẹ nhé! Uống thêm trà đá tích duyên rồi cô chỉ kèo VIP!`;
+    }
 
     if (!signal) {
       // Bà đồng ý nhưng provider không có tín hiệu (ví dụ Webhook rỗng)
@@ -116,7 +131,7 @@ export class SignalDecisionService {
   }
 
   // Cơ Chế Xóc Đĩa 60/40 Của Ông Thầy Đồ
-  public async requestThayDoSignal(playerId: string, role: PlayerRole = 'Trader Tập Sự'): Promise<SignalDecisionResult> {
+  public async requestThayDoSignal(playerId: string, role: PlayerRole = 'Trader Tập Sự', teaCount = 0): Promise<SignalDecisionResult> {
     const now = Date.now();
     const cooldownSec = 45; // 45s cooldown cho Thầy Đồ
 
@@ -131,7 +146,7 @@ export class SignalDecisionService {
       };
     }
 
-    // 60% Thầy cho tín hiệu, 40% Thầy từ chối
+    // 60% Thầy cho tín hiệu, 40% Thầy từ chối phán đứng ngoài
     const randomVal = crypto.randomInt(0, 10000);
     const isAllowed = randomVal < 6000; // 60%
 
@@ -153,10 +168,16 @@ export class SignalDecisionService {
       };
     }
 
-    // 60% Case: Thầy đồng ý
+    // 60% Case: Thầy đồng ý gieo quẻ (xét thưởng Kèo VIP theo trà đá)
+    const baseVipRate = 0.60;
+    const vipChance = Math.min(0.95, baseVipRate + teaCount * 0.05);
+    const isVip = crypto.randomInt(0, 10000) < Math.round(vipChance * 10000);
+
     const provider = signalProviderManager.getActiveProvider();
-    const signal = await provider.getAvailableSignal(role);
-    const acceptQuote = dialogueService.getThayDoAcceptQuote();
+    const signal = await provider.getAvailableSignal(role, isVip ? 'VIP' : 'M1');
+    const acceptQuote = isVip
+      ? `Bát mở... Lẻ! Quẻ linh ứng báo KÈO VIP đại cát đại lợi [${signal?.symbol || 'THỊ TRƯỜNG'}]! Con theo lệnh này nhớ giữ tâm bất biến!`
+      : `Bát mở... Chẵn! Quẻ chỉ thấy sóng ngắn phòng M1 Scalp [${signal?.symbol || 'THỊ TRƯỜNG'}], lướt nhanh kẻo đứt tay nha con! Uống thêm trà đá tích phước để mở quẻ VIP!`;
 
     if (!signal) {
       const emptyQuote = 'Thầy mở bát ra mà quẻ biến ảo quá chưa thấy nến rõ ràng, giữ tiền cũng là có lộc đấy con!';

@@ -46,6 +46,8 @@ export class AppDatabase {
         note TEXT,
         source TEXT NOT NULL,
         is_demo INTEGER NOT NULL DEFAULT 1,
+        channel_id TEXT,
+        tier TEXT DEFAULT 'M1',
         expires_at INTEGER NOT NULL,
         status TEXT NOT NULL,
         created_at INTEGER NOT NULL
@@ -101,6 +103,16 @@ export class AppDatabase {
     }
     try {
       this.db.exec('ALTER TABLE sessions ADD COLUMN tea_count INTEGER NOT NULL DEFAULT 0;');
+    } catch {
+      // already exists
+    }
+    try {
+      this.db.exec('ALTER TABLE signals ADD COLUMN channel_id TEXT;');
+    } catch {
+      // already exists
+    }
+    try {
+      this.db.exec("ALTER TABLE signals ADD COLUMN tier TEXT DEFAULT 'M1';");
     } catch {
       // already exists
     }
@@ -184,8 +196,8 @@ export class AppDatabase {
     const stmt = this.db.prepare(`
       INSERT INTO signals (
         id, symbol, market, direction, entry, stop_loss, take_profit_json,
-        timeframe, note, source, is_demo, expires_at, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        timeframe, note, source, is_demo, channel_id, tier, expires_at, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       signal.id,
@@ -199,21 +211,37 @@ export class AppDatabase {
       signal.note,
       signal.source,
       signal.isDemo ? 1 : 0,
+      signal.channelId || null,
+      signal.tier || 'M1',
       signal.expiresAt,
       signal.status,
       signal.createdAt
     );
   }
 
-  public getActiveSignals(limit = 20): SignalData[] {
+  public getActiveSignals(limit = 20, tier?: 'VIP' | 'M1'): SignalData[] {
     const now = Date.now();
-    const stmt = this.db.prepare(`
-      SELECT * FROM signals
-      WHERE status = 'ACTIVE' AND expires_at > ?
-      ORDER BY created_at DESC
-      LIMIT ?
-    `);
-    const rows = stmt.all(now, limit) as any[];
+    let stmt;
+    let rows: any[];
+
+    if (tier) {
+      stmt = this.db.prepare(`
+        SELECT * FROM signals
+        WHERE status = 'ACTIVE' AND expires_at > ? AND tier = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `);
+      rows = stmt.all(now, tier, limit) as any[];
+    } else {
+      stmt = this.db.prepare(`
+        SELECT * FROM signals
+        WHERE status = 'ACTIVE' AND expires_at > ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `);
+      rows = stmt.all(now, limit) as any[];
+    }
+
     return rows.map((r) => ({
       id: r.id,
       symbol: r.symbol,
@@ -226,6 +254,8 @@ export class AppDatabase {
       note: r.note || '',
       source: r.source,
       isDemo: Boolean(r.is_demo),
+      channelId: r.channel_id || undefined,
+      tier: (r.tier as 'VIP' | 'M1') || 'M1',
       createdAt: r.created_at,
       expiresAt: r.expires_at,
       status: r.status,

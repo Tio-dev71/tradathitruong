@@ -10,7 +10,7 @@ export interface ProviderStatus {
 }
 
 export interface ISignalProvider {
-  getAvailableSignal(role?: string): Promise<SignalData | null>;
+  getAvailableSignal(role?: string, tier?: 'VIP' | 'M1'): Promise<SignalData | null>;
   getSignalById(id: string): Promise<SignalData | null>;
   validateSignal(signal: unknown): boolean;
   getProviderStatus(): ProviderStatus;
@@ -98,12 +98,20 @@ const DEMO_SIGNALS: Array<Omit<SignalData, 'id' | 'createdAt' | 'expiresAt'>> = 
 ];
 
 export class MockSignalProvider implements ISignalProvider {
-  public async getAvailableSignal(_role?: string): Promise<SignalData | null> {
-    const template = DEMO_SIGNALS[Math.floor(Math.random() * DEMO_SIGNALS.length)];
+  public async getAvailableSignal(_role?: string, tier?: 'VIP' | 'M1'): Promise<SignalData | null> {
+    let pool = DEMO_SIGNALS;
+    if (tier === 'VIP') {
+      pool = DEMO_SIGNALS.filter((s) => s.symbol.includes('BTC') || s.symbol.includes('ETH') || s.symbol.includes('XAU'));
+    } else if (tier === 'M1') {
+      pool = DEMO_SIGNALS.filter((s) => s.timeframe === '1H' || s.timeframe === '4H');
+    }
+    const template = pool[Math.floor(Math.random() * pool.length)] || DEMO_SIGNALS[0];
     const now = Date.now();
     const signal: SignalData = {
       ...template,
       id: 'mock_' + crypto.randomBytes(4).toString('hex'),
+      tier: tier || 'VIP',
+      note: tier === 'VIP' ? `[KÈO VIP PHÒNG XỊN] ${template.note}` : `[KÈO LƯỚT M1 SCALP] ${template.note}`,
       createdAt: now,
       expiresAt: now + 3600 * 1000 * 4, // 4 hours
     };
@@ -130,10 +138,17 @@ export class MockSignalProvider implements ISignalProvider {
 }
 
 export class WebhookSignalProvider implements ISignalProvider {
-  public async getAvailableSignal(): Promise<SignalData | null> {
-    const signals = db.getActiveSignals(10);
+  public async getAvailableSignal(_role?: string, tier?: 'VIP' | 'M1'): Promise<SignalData | null> {
+    const signals = db.getActiveSignals(10, tier);
     if (!signals || signals.length === 0) {
-      return null;
+      // Fallback 1: Any active signal in DB
+      const anySignals = db.getActiveSignals(10);
+      if (anySignals && anySignals.length > 0) {
+        return anySignals[0];
+      }
+      // Fallback 2: Generate dynamic signal matching tier
+      const mock = new MockSignalProvider();
+      return mock.getAvailableSignal(_role, tier);
     }
     // Return the freshest active signal
     return signals[0];

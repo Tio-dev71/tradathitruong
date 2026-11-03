@@ -14,6 +14,8 @@ export interface SignalData {
   note: string;
   source: 'MOCK_ENGINE' | 'WEBHOOK' | 'DISCORD' | string;
   isDemo: boolean;
+  channelId?: string;
+  tier?: 'VIP' | 'M1';
   createdAt: number;
   expiresAt: number;
   status: SignalStatus;

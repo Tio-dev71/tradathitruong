@@ -400,7 +400,7 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
           message: `Gieo quẻ xóc đĩa (-15 Xu) • Thầy Đồ đang mở bát xem vận hạn!`,
         });
 
-        const result = await signalDecisionService.requestThayDoSignal(player.id, player.role);
+        const result = await signalDecisionService.requestThayDoSignal(player.id, player.role, player.teaCount);
         socket.emit('signal:response', { ...result, sourceNpc: 'thay_do' });
 
         io.emit('thay_do:speech', {

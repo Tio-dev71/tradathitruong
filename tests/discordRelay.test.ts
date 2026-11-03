@@ -79,6 +79,35 @@ describe('Discord TradingView Bot Signal Relay & Embed Parser', () => {
     const res2 = discordSignalRelay.processDiscordPayload(payload);
     expect(res2.success).toBe(false);
   });
+
+  it('tags VIP channels and M1 scalp channels with correct tier', () => {
+    // 1. VIP room: Gold (1450669768884617247)
+    const vipGold = discordSignalRelay.processDiscordPayload({
+      id: 'test_vip_gold_' + Date.now(),
+      channel_id: '1450669768884617247',
+      content: 'Coin: XAU/USD\nSide: LONG 🟢\nEntry: 2750\nTP: 2770\nSL: 2735',
+    });
+    expect(vipGold.success).toBe(true);
+    expect(vipGold.signal?.tier).toBe('VIP');
+
+    // 2. VIP room: BTC (1416343865752817664)
+    const vipBtc = discordSignalRelay.processDiscordPayload({
+      id: 'test_vip_btc_' + Date.now(),
+      channel_id: '1416343865752817664',
+      content: 'Coin: BTC/USD\nSide: SHORT 🔴\nEntry: 88000\nTP: 86000\nSL: 89000',
+    });
+    expect(vipBtc.success).toBe(true);
+    expect(vipBtc.signal?.tier).toBe('VIP');
+
+    // 3. M1 room: 1428795313014968522
+    const m1Scalp = discordSignalRelay.processDiscordPayload({
+      id: 'test_m1_scalp_' + Date.now(),
+      channel_id: '1428795313014968522',
+      content: 'Coin: XRP/USD\nSide: LONG 🟢\nTimeframe: m1\nEntry: 1.25\nTP: 1.28\nSL: 1.23',
+    });
+    expect(m1Scalp.success).toBe(true);
+    expect(m1Scalp.signal?.tier).toBe('M1');
+  });
 });
 
 describe('Economy Credit System & Tea Luck Boost', () => {

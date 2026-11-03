@@ -99,3 +99,4 @@ Nếu bạn muốn khi Mac mini khởi động lại hoặc mất điện có l�
   git pull
   ./deploy.sh
   ```
+

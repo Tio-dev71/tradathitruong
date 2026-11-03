@@ -116,3 +116,4 @@ else
     echo -e "\n${RED}⚠️  Cảnh báo: Chưa phát hiện server lắng nghe trên port ${PORT}.${NC}"
     echo -e "Kiểm tra log lỗi tại: ${YELLOW}cat ${ERR_LOG}${NC}"
 fi
+
