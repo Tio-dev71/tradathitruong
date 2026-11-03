@@ -4,7 +4,7 @@ import type { AvatarRig } from './AvatarBuilder';
 
 export class PlayerController {
   public position = new THREE.Vector3(0, 0, 4);
-  public rotationY = 0;
+  public rotationY = Math.PI;
   public isMoving = false;
   public isRunning = false;
   public isSitting = false;
@@ -174,68 +174,85 @@ export class PlayerController {
   }
 
   public update(delta: number, avatarRig?: AvatarRig) {
-    // 1. Gather movement vector
-    let moveForward = 0;
-    let moveRight = 0;
-
-    if (this.keys['KeyW'] || this.keys['ArrowUp']) moveForward += 1;
-    if (this.keys['KeyS'] || this.keys['ArrowDown']) moveForward -= 1;
-    if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveRight -= 1;
-    if (this.keys['KeyD'] || this.keys['ArrowRight']) moveRight += 1;
+    // 1. Gather movement and turning inputs
+    const keyForward = Boolean(this.keys['KeyW'] || this.keys['ArrowUp']);
+    const keyBackward = Boolean(this.keys['KeyS'] || this.keys['ArrowDown']);
+    const keyTurnLeft = Boolean(this.keys['KeyA'] || this.keys['ArrowLeft']);
+    const keyTurnRight = Boolean(this.keys['KeyD'] || this.keys['ArrowRight']);
+    const keyStrafeLeft = Boolean(this.keys['KeyQ']);
 
     // Mobile joystick input
-    if (Math.abs(this.joystickVector.y) > 0.1) moveForward -= this.joystickVector.y;
-    if (Math.abs(this.joystickVector.x) > 0.1) moveRight += this.joystickVector.x;
+    const joyForward = -this.joystickVector.y; // positive when pushed up
+    const joyTurn = this.joystickVector.x; // positive when pushed right
+
+    // A/D / Left/Right controls turning/steering (Không cần phải dùng chuột nữa)
+    const turnSpeed = 3.4; // radians per second
+    let turnInput = 0;
+    if (keyTurnLeft) turnInput += 1;
+    if (keyTurnRight) turnInput -= 1;
+    if (Math.abs(joyTurn) > 0.15) turnInput -= joyTurn;
+
+    if (Math.abs(turnInput) > 0.01) {
+      if (this.isSitting) {
+        this.isSitting = false;
+      }
+      this.rotationY += turnInput * turnSpeed * delta;
+      if (this.cameraMode === 'first') {
+        this.cameraYaw = this.rotationY;
+      }
+    }
+
+    // Forward / Backward movement
+    let moveInput = 0;
+    if (keyForward) moveInput += 1;
+    if (keyBackward) moveInput -= 0.7; // smooth backpedal
+    if (Math.abs(joyForward) > 0.15) moveInput += joyForward;
 
     this.isRunning = Boolean(this.keys['ShiftLeft'] || this.keys['ShiftRight']);
     const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
 
-    const inputLength = Math.sqrt(moveForward * moveForward + moveRight * moveRight);
-    this.isMoving = inputLength > 0.1;
+    this.isMoving = Math.abs(moveInput) > 0.05 || keyStrafeLeft;
 
-    // Camera horizontal vectors
-    const camForwardX = -Math.sin(this.cameraYaw);
-    const camForwardZ = -Math.cos(this.cameraYaw);
-    const camRightX = Math.cos(this.cameraYaw);
-    const camRightZ = -Math.sin(this.cameraYaw);
+    // If mouse was actively dragged to look around, pressing forward snaps avatar towards camera view
+    if (this.isPointerDown && keyForward) {
+      this.rotationY = this.cameraYaw + Math.PI;
+    }
 
     if (this.isMoving) {
       if (this.isSitting) {
-        // Stand up if moving
         this.isSitting = false;
       }
 
-      const worldDirX = (moveForward * camForwardX + moveRight * camRightX) / inputLength;
-      const worldDirZ = (moveForward * camForwardZ + moveRight * camRightZ) / inputLength;
+      // Forward vector based on avatar orientation
+      const fwdX = Math.sin(this.rotationY);
+      const fwdZ = Math.cos(this.rotationY);
 
-      // Target position
-      const nextX = this.position.x + worldDirX * speed * delta;
-      const nextZ = this.position.z + worldDirZ * speed * delta;
+      // Right vector perpendicular to forward
+      const rightX = Math.cos(this.rotationY);
+      const rightZ = -Math.sin(this.rotationY);
 
-      // Collision resolution
-      const resolved = this.collisionSystem.resolveMovement(
-        { x: this.position.x, z: this.position.z },
-        { x: nextX, z: nextZ },
-        0.45
-      );
+      let dirX = fwdX * moveInput;
+      let dirZ = fwdZ * moveInput;
 
-      this.position.x = resolved.x;
-      this.position.z = resolved.z;
-
-      if (this.cameraMode === 'first') {
-        // In first person, avatar faces camera orientation
-        this.rotationY = this.cameraYaw;
-      } else {
-        // Smoothly rotate avatar towards movement direction in third-person
-        const targetAngle = Math.atan2(worldDirX, worldDirZ);
-        let angleDiff = targetAngle - this.rotationY;
-        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-        this.rotationY += angleDiff * Math.min(1.0, delta * 12);
+      if (keyStrafeLeft) {
+        dirX -= rightX * 0.8;
+        dirZ -= rightZ * 0.8;
       }
-    } else {
-      if (this.cameraMode === 'first') {
-        this.rotationY = this.cameraYaw;
+
+      const moveLen = Math.hypot(dirX, dirZ);
+      if (moveLen > 0.001) {
+        const nextX = this.position.x + (dirX / moveLen) * speed * delta;
+        const nextZ = this.position.z + (dirZ / moveLen) * speed * delta;
+
+        // Collision resolution
+        const resolved = this.collisionSystem.resolveMovement(
+          { x: this.position.x, z: this.position.z },
+          { x: nextX, z: nextZ },
+          0.45
+        );
+
+        this.position.x = resolved.x;
+        this.position.z = resolved.z;
       }
     }
 
@@ -261,7 +278,7 @@ export class PlayerController {
       }
     }
 
-    // 3. Update camera position & orientation
+    // 3. Update Camera Position & Follow Orientation
     if (this.cameraMode === 'first') {
       // First Person Camera: placed exactly at avatar eye height
       const eyeHeight = this.isSitting ? 0.85 : 1.18;
@@ -282,7 +299,16 @@ export class PlayerController {
         this.camera.position.z + forwardZ * 10
       );
     } else {
-      // Third Person Orbit Camera
+      // Third Person Follow Camera:
+      // Tự động bám sau lưng nhân vật theo hướng di chuyển khi không giữ chuột
+      if (!this.isPointerDown) {
+        const desiredCameraYaw = this.rotationY - Math.PI;
+        let diff = desiredCameraYaw - this.cameraYaw;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        this.cameraYaw += diff * Math.min(1.0, delta * 12);
+      }
+
       const offsetX = Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
       const offsetY = Math.sin(this.cameraPitch) * this.cameraDistance + 1.2;
       const offsetZ = Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
@@ -294,7 +320,7 @@ export class PlayerController {
       );
 
       // Smooth camera lag
-      this.camera.position.lerp(this.targetCameraPos, Math.min(1.0, delta * 8));
+      this.camera.position.lerp(this.targetCameraPos, Math.min(1.0, delta * 12));
       this.camera.lookAt(this.position.x, this.position.y + 1.2, this.position.z);
     }
   }
