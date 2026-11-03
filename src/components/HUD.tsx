@@ -9,6 +9,8 @@ interface Props {
   cameraMode?: 'third' | 'first';
   onToggleCameraMode?: () => void;
   onToggleMic?: () => void;
+  autoFollowCamera?: boolean;
+  onToggleAutoFollow?: () => void;
 }
 
 export const HUD: React.FC<Props> = ({
@@ -17,6 +19,8 @@ export const HUD: React.FC<Props> = ({
   cameraMode = 'third',
   onToggleCameraMode,
   onToggleMic,
+  autoFollowCamera = true,
+  onToggleAutoFollow,
 }) => {
   const {
     player,
@@ -159,6 +163,25 @@ export const HUD: React.FC<Props> = ({
             </button>
           )}
 
+          {/* Third-person: Auto-Follow vs Free Mouse Camera Toggle */}
+          {cameraMode === 'third' && onToggleAutoFollow && (
+            <button
+              onClick={() => {
+                soundEngine.playUiClick();
+                onToggleAutoFollow();
+              }}
+              className={`flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border text-[11px] sm:text-xs font-bold transition shadow cursor-pointer ${
+                autoFollowCamera
+                  ? 'bg-amber-950/80 text-amber-300 border-amber-600/80 hover:bg-amber-900/90'
+                  : 'bg-indigo-950/80 text-indigo-300 border-indigo-500/80 hover:bg-indigo-900/90'
+              }`}
+              title="Chế độ camera: Tự động bám sau lưng / Tự do điều chỉnh chuột (Phím [C])"
+            >
+              <span>{autoFollowCamera ? '🔄' : '🖱️'}</span>
+              <span className="hidden sm:inline">{autoFollowCamera ? 'Cam Bám' : 'Cam Chuột'}</span>
+            </button>
+          )}
+
           {/* Live Voice Chat Mic Toggle */}
           {onToggleMic && (
             <button
@@ -201,16 +224,20 @@ export const HUD: React.FC<Props> = ({
 
       {/* Bottom Center: Keyboard / Control Guide */}
       <div className="flex justify-center w-full">
-        <div className="hidden md:flex items-center gap-4 px-4 py-2 rounded-full bg-black/50 border border-amber-800/40 text-amber-200/80 text-xs backdrop-blur-sm pointer-events-auto">
+        <div className="hidden md:flex items-center gap-3 px-4 py-2 rounded-full bg-black/50 border border-amber-800/40 text-amber-200/80 text-xs backdrop-blur-sm pointer-events-auto">
           <span><b className="text-amber-400">WASD</b> Di chuyển</span>
+          <span>•</span>
+          <span><b className="text-amber-400">Space</b> Nhảy</span>
           <span>•</span>
           <span><b className="text-amber-400">Shift</b> Chạy nhanh</span>
           <span>•</span>
           <span><b className="text-amber-400">[V]</b> Góc nhìn 1/3</span>
           <span>•</span>
+          <span><b className="text-amber-400">[C]</b> Cam bám/chuột</span>
+          <span>•</span>
           <span><b className="text-amber-400">Chuột</b> Xoay camera & cuộn zoom</span>
           <span>•</span>
-          <span><b className="text-amber-400">[E]</b> Trò chuyện với Bà Bán Trà</span>
+          <span><b className="text-amber-400">[E]</b> Tương tác</span>
         </div>
       </div>
     </div>

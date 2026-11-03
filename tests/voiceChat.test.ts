@@ -9,7 +9,7 @@ describe('WebRTC Proximity Voice Chat Backend Signaling', () => {
       id: 'session_voice_user_1',
       nickname: 'Trader Trà Đá',
       role: 'Cao Thủ Đu Đỉnh',
-      avatar: { hair: 'short', skinTone: '#fcd5b5', outfitColor: '#2e86de', pantsColor: '#2c3e50', hairColor: '#1a1a1a' },
+      avatar: { gender: 'male', hairStyle: 'short', skinTone: '#fcd5b5', outfitColor: '#2e86de', pantsColor: '#2c3e50', hairColor: '#1a1a1a' },
       position: { x: 0, y: 0, z: 0 },
       rotationY: 0,
       isMoving: false,
@@ -33,3 +33,4 @@ describe('WebRTC Proximity Voice Chat Backend Signaling', () => {
     expect(activePlayersStore.getSocketIdByPlayerId('session_voice_user_1')).toBeUndefined();
   });
 });
+

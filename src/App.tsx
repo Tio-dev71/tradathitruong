@@ -62,6 +62,7 @@ export function App() {
   const [isSitting, setIsSitting] = useState(false);
   const [canInteractNpc, setCanInteractNpc] = useState(false);
   const [cameraMode, setCameraMode] = useState<'third' | 'first'>('third');
+  const [autoFollowCam, setAutoFollowCam] = useState(true);
 
   // Synchronize local avatar speaking indicator
   useEffect(() => {
@@ -88,6 +89,11 @@ export function App() {
     // Connect camera mode change callback
     controller.onCameraModeChange = (mode) => {
       setCameraMode(mode);
+    };
+
+    // Connect camera follow mode change callback
+    controller.onCameraFollowModeChange = (follow) => {
+      setAutoFollowCam(follow);
     };
 
     // Connect interact key
@@ -531,6 +537,10 @@ export function App() {
             isSitting={isSitting}
             cameraMode={cameraMode}
             onToggleCameraMode={handleToggleCameraMode}
+            autoFollowCamera={autoFollowCam}
+            onToggleAutoFollow={() => {
+              playerControllerRef.current?.toggleAutoFollowCamera();
+            }}
             onToggleMic={() => voiceChatService.toggleMic()}
           />
           <ChatBox
@@ -554,10 +564,17 @@ export function App() {
                   playerControllerRef.current.isRunning = run;
                 }
               }}
+              onJump={() => {
+                playerControllerRef.current?.jump();
+              }}
               onToggleSit={handleToggleSit}
               isSitting={isSitting}
               onToggleCameraMode={handleToggleCameraMode}
               cameraMode={cameraMode}
+              autoFollowCamera={autoFollowCam}
+              onToggleAutoFollow={() => {
+                playerControllerRef.current?.toggleAutoFollowCamera();
+              }}
               canInteract={canInteractNpc}
               onToggleMic={() => voiceChatService.toggleMic()}
               isMicOn={isMicOn}

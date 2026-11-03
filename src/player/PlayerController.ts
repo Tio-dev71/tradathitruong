@@ -16,11 +16,21 @@ export class PlayerController {
 
   // Camera parameters
   public cameraDistance = 6.2;
-  public cameraPitch = 0.25; // vertical angle in radians (above ground - ideal eye level)
+  public cameraPitch = 0.38; // vertical angle in radians (cao hơn để góc nhìn thứ 3 thoáng đãng, nhìn rõ phố xá)
   public cameraYaw = 0; // horizontal angle in radians
   private targetCameraPos = new THREE.Vector3();
   public cameraMode: 'third' | 'first' = 'third';
   public onCameraModeChange?: (mode: 'third' | 'first') => void;
+
+  // Camera follow mode in 3rd person: true = bám theo nhân vật; false = tự do xoay bằng chuột
+  public autoFollowCamera = true;
+  public onCameraFollowModeChange?: (autoFollow: boolean) => void;
+
+  // Jump physics
+  public velocityY = 0;
+  public isGrounded = true;
+  private jumpForce = 6.2;
+  private gravity = -18.0;
 
   // Input states
   private keys: Record<string, boolean> = {};
@@ -83,6 +93,27 @@ export class PlayerController {
     }
   }
 
+  public toggleAutoFollowCamera(): boolean {
+    this.autoFollowCamera = !this.autoFollowCamera;
+    this.onCameraFollowModeChange?.(this.autoFollowCamera);
+    return this.autoFollowCamera;
+  }
+
+  public setAutoFollowCamera(autoFollow: boolean) {
+    this.autoFollowCamera = autoFollow;
+    this.onCameraFollowModeChange?.(this.autoFollowCamera);
+  }
+
+  public jump() {
+    if (this.isSitting) {
+      this.isSitting = false;
+    }
+    if (this.isGrounded) {
+      this.velocityY = this.jumpForce;
+      this.isGrounded = false;
+    }
+  }
+
   private bindEvents() {
     const normalizeKey = (code: string, key: string): string => {
       const lower = key ? key.toLowerCase() : '';
@@ -94,10 +125,18 @@ export class PlayerController {
     };
 
     window.addEventListener('keydown', (e) => {
-      // Don't capture WASD or V if typing in chat input
+      // Don't capture keys if typing in chat input
       if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') {
         return;
       }
+
+      // [Space] Jump
+      if (e.code === 'Space' || e.key === ' ') {
+        e.preventDefault();
+        this.jump();
+        return;
+      }
+
       const k = normalizeKey(e.code, e.key);
       this.keys[k] = true;
 
@@ -108,6 +147,11 @@ export class PlayerController {
       // [V] Switch between First-Person and Third-Person View
       if (e.code === 'KeyV' || e.key === 'v' || e.key === 'V') {
         this.toggleCameraMode();
+      }
+
+      // [C] Toggle Auto-follow vs Free mouse camera in third person
+      if (e.code === 'KeyC' || e.key === 'c' || e.key === 'C') {
+        this.toggleAutoFollowCamera();
       }
     });
 
@@ -148,8 +192,8 @@ export class PlayerController {
         // First-person view: look up and down freely (-78 deg to +78 deg)
         this.cameraPitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraPitch + dy * 0.004));
       } else {
-        // Third-person view: stay above ground level & prevent extreme overhead angle
-        this.cameraPitch = Math.max(0.08, Math.min(0.50, this.cameraPitch + dy * 0.0035));
+        // Third-person view: stay above ground level with higher vantage angle (up to 42 degrees)
+        this.cameraPitch = Math.max(0.10, Math.min(0.72, this.cameraPitch + dy * 0.0035));
       }
     });
 
@@ -179,7 +223,18 @@ export class PlayerController {
   }
 
   public update(delta: number, avatarRig?: AvatarRig) {
-    // 1. Gather movement and turning inputs
+    // 1. Vertical Jump & Gravity Physics
+    if (!this.isGrounded || this.position.y > 0 || this.velocityY !== 0) {
+      this.velocityY += this.gravity * delta;
+      this.position.y += this.velocityY * delta;
+      if (this.position.y <= 0) {
+        this.position.y = 0;
+        this.velocityY = 0;
+        this.isGrounded = true;
+      }
+    }
+
+    // 2. Gather movement and turning inputs
     const keyForward = Boolean(this.keys['KeyW'] || this.keys['ArrowUp']);
     const keyBackward = Boolean(this.keys['KeyS'] || this.keys['ArrowDown']);
     const keyTurnLeft = Boolean(this.keys['KeyA'] || this.keys['ArrowLeft']);
@@ -190,75 +245,132 @@ export class PlayerController {
     const joyForward = -this.joystickVector.y; // positive when pushed up
     const joyTurn = this.joystickVector.x; // positive when pushed right
 
-    // A/D / Left/Right controls turning/steering (Không cần phải dùng chuột nữa)
-    const turnSpeed = 3.4; // radians per second
-    let turnInput = 0;
-    if (keyTurnLeft) turnInput += 1;
-    if (keyTurnRight) turnInput -= 1;
-    if (Math.abs(joyTurn) > 0.15) turnInput -= joyTurn;
-
-    if (Math.abs(turnInput) > 0.01) {
-      if (this.isSitting) {
-        this.isSitting = false;
-      }
-      this.rotationY += turnInput * turnSpeed * delta;
-      if (this.cameraMode === 'first') {
-        this.cameraYaw = this.rotationY;
-      }
-    }
-
-    // Forward / Backward movement
-    let moveInput = 0;
-    if (keyForward) moveInput += 1;
-    if (keyBackward) moveInput -= 0.7; // smooth backpedal
-    if (Math.abs(joyForward) > 0.15) moveInput += joyForward;
-
     this.isRunning = Boolean(this.keys['ShiftLeft'] || this.keys['ShiftRight']);
     const speed = this.isRunning ? this.runSpeed : this.walkSpeed;
 
-    this.isMoving = Math.abs(moveInput) > 0.05 || keyStrafeLeft;
+    let dirX = 0;
+    let dirZ = 0;
 
-    // If mouse was actively dragged to look around, pressing forward snaps avatar towards camera view
-    if (this.isPointerDown && keyForward) {
-      this.rotationY = this.cameraYaw + Math.PI;
-    }
+    if (this.cameraMode === 'first') {
+      // --- FIRST PERSON VIEW ---
+      // In first person, camera looks horizontally at (-sin(yaw), -cos(yaw))
+      const camFwdX = -Math.sin(this.cameraYaw);
+      const camFwdZ = -Math.cos(this.cameraYaw);
+      const camRightX = Math.cos(this.cameraYaw);
+      const camRightZ = -Math.sin(this.cameraYaw);
 
-    if (this.isMoving) {
-      if (this.isSitting) {
-        this.isSitting = false;
+      // Turning / steering with A/D or joystick
+      const turnSpeed = 3.2;
+      let turnInput = 0;
+      if (keyTurnLeft) turnInput += 1;
+      if (keyTurnRight) turnInput -= 1;
+      if (Math.abs(joyTurn) > 0.15) turnInput -= joyTurn;
+
+      if (Math.abs(turnInput) > 0.01) {
+        if (this.isSitting) this.isSitting = false;
+        this.cameraYaw += turnInput * turnSpeed * delta;
       }
 
-      // Forward vector based on avatar orientation
+      // W moves forward in the exact look direction; S backpedals
+      let moveInput = 0;
+      if (keyForward) moveInput += 1;
+      if (keyBackward) moveInput -= 0.7; // smooth backpedal
+      if (Math.abs(joyForward) > 0.15) moveInput += joyForward;
+
+      if (Math.abs(moveInput) > 0.05 || keyStrafeLeft) {
+        dirX += camFwdX * moveInput;
+        dirZ += camFwdZ * moveInput;
+        if (keyStrafeLeft) {
+          dirX -= camRightX * 0.8;
+          dirZ -= camRightZ * 0.8;
+        }
+      }
+
+      // Sync character orientation with camera yaw
+      this.rotationY = this.cameraYaw + Math.PI;
+    } else if (!this.autoFollowCamera) {
+      // --- THIRD PERSON: FREE CAMERA (Cam Tự Do - Xoay bằng chuột, camera không tự xoay) ---
+      const camFwdX = -Math.sin(this.cameraYaw);
+      const camFwdZ = -Math.cos(this.cameraYaw);
+      const camRightX = Math.cos(this.cameraYaw);
+      const camRightZ = -Math.sin(this.cameraYaw);
+
+      let fwdInput = 0;
+      if (keyForward) fwdInput += 1;
+      if (keyBackward) fwdInput -= 0.8;
+      if (Math.abs(joyForward) > 0.15) fwdInput += joyForward;
+
+      let sideInput = 0;
+      if (keyTurnRight) sideInput += 1;
+      if (keyTurnLeft) sideInput -= 1;
+      if (Math.abs(joyTurn) > 0.15) sideInput += joyTurn;
+      if (keyStrafeLeft) sideInput -= 0.8;
+
+      dirX = camFwdX * fwdInput + camRightX * sideInput;
+      dirZ = camFwdZ * fwdInput + camRightZ * sideInput;
+
+      // Smoothly rotate avatar body to face movement direction
+      if (Math.hypot(dirX, dirZ) > 0.05) {
+        const targetRotY = Math.atan2(dirX, dirZ);
+        let diff = targetRotY - this.rotationY;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        this.rotationY += diff * Math.min(1.0, delta * 14);
+      }
+    } else {
+      // --- THIRD PERSON: AUTO-FOLLOW (Cam tự động bám sau lưng nhân vật) ---
+      const turnSpeed = 3.4;
+      let turnInput = 0;
+      if (keyTurnLeft) turnInput += 1;
+      if (keyTurnRight) turnInput -= 1;
+      if (Math.abs(joyTurn) > 0.15) turnInput -= joyTurn;
+
+      if (Math.abs(turnInput) > 0.01) {
+        if (this.isSitting) this.isSitting = false;
+        this.rotationY += turnInput * turnSpeed * delta;
+      }
+
+      let moveInput = 0;
+      if (keyForward) moveInput += 1;
+      if (keyBackward) moveInput -= 0.7; // smooth backpedal
+      if (Math.abs(joyForward) > 0.15) moveInput += joyForward;
+
       const fwdX = Math.sin(this.rotationY);
       const fwdZ = Math.cos(this.rotationY);
-
-      // Right vector perpendicular to forward
       const rightX = Math.cos(this.rotationY);
       const rightZ = -Math.sin(this.rotationY);
 
-      let dirX = fwdX * moveInput;
-      let dirZ = fwdZ * moveInput;
+      dirX = fwdX * moveInput;
+      dirZ = fwdZ * moveInput;
 
       if (keyStrafeLeft) {
         dirX -= rightX * 0.8;
         dirZ -= rightZ * 0.8;
       }
 
-      const moveLen = Math.hypot(dirX, dirZ);
-      if (moveLen > 0.001) {
-        const nextX = this.position.x + (dirX / moveLen) * speed * delta;
-        const nextZ = this.position.z + (dirZ / moveLen) * speed * delta;
-
-        // Collision resolution
-        const resolved = this.collisionSystem.resolveMovement(
-          { x: this.position.x, z: this.position.z },
-          { x: nextX, z: nextZ },
-          0.45
-        );
-
-        this.position.x = resolved.x;
-        this.position.z = resolved.z;
+      if (this.isPointerDown && keyForward) {
+        this.rotationY = this.cameraYaw + Math.PI;
       }
+    }
+
+    const moveLen = Math.hypot(dirX, dirZ);
+    this.isMoving = moveLen > 0.05;
+
+    if (this.isMoving) {
+      if (this.isSitting) this.isSitting = false;
+
+      const nextX = this.position.x + (dirX / moveLen) * speed * delta;
+      const nextZ = this.position.z + (dirZ / moveLen) * speed * delta;
+
+      // Collision resolution
+      const resolved = this.collisionSystem.resolveMovement(
+        { x: this.position.x, z: this.position.z },
+        { x: nextX, z: nextZ },
+        0.45
+      );
+
+      this.position.x = resolved.x;
+      this.position.z = resolved.z;
     }
 
     // Handle Emote timer
@@ -269,10 +381,9 @@ export class PlayerController {
       }
     }
 
-    // 2. Update avatar position and orientation
+    // 3. Update avatar position and orientation
     if (avatarRig) {
-      avatarRig.root.position.x = this.position.x;
-      avatarRig.root.position.z = this.position.z;
+      avatarRig.root.position.set(this.position.x, this.position.y, this.position.z);
       avatarRig.root.rotation.y = this.rotationY;
 
       // In first-person view, hide the local avatar to prevent clipping into view
@@ -283,7 +394,7 @@ export class PlayerController {
       }
     }
 
-    // 3. Update Camera Position & Follow Orientation
+    // 4. Update Camera Position & Follow Orientation
     if (this.cameraMode === 'first') {
       // First Person Camera: placed exactly at avatar eye height
       const eyeHeight = this.isSitting ? 0.85 : 1.18;
@@ -305,20 +416,21 @@ export class PlayerController {
       );
     } else {
       // Third Person Follow Camera:
-      // Tự động bám sau lưng nhân vật theo hướng di chuyển khi không giữ chuột
-      if (!this.isPointerDown) {
+      // Tự động bám sau lưng nhân vật chỉ khi autoFollowCamera === true và không giữ chuột
+      if (this.autoFollowCamera && !this.isPointerDown) {
         const desiredCameraYaw = this.rotationY - Math.PI;
         let diff = desiredCameraYaw - this.cameraYaw;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         this.cameraYaw += diff * Math.min(1.0, delta * 12);
 
-        // Tự động trả góc nhìn về tầm mắt (0.25 rad) tránh bị góc nhìn từ trên nóc nhà xuống
-        this.cameraPitch += (0.25 - this.cameraPitch) * Math.min(1.0, delta * 3);
+        // Tự động trả góc nhìn về góc pitch cao (0.38 rad)
+        this.cameraPitch += (0.38 - this.cameraPitch) * Math.min(1.0, delta * 3);
       }
 
+      // Height offset cao hơn (+1.8m) cho góc nhìn thứ 3 thoáng đãng
       const offsetX = Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
-      const offsetY = Math.sin(this.cameraPitch) * this.cameraDistance + 1.2;
+      const offsetY = Math.sin(this.cameraPitch) * this.cameraDistance + 1.8;
       const offsetZ = Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
 
       this.targetCameraPos.set(
@@ -329,7 +441,7 @@ export class PlayerController {
 
       // Smooth camera lag
       this.camera.position.lerp(this.targetCameraPos, Math.min(1.0, delta * 12));
-      this.camera.lookAt(this.position.x, this.position.y + 1.2, this.position.z);
+      this.camera.lookAt(this.position.x, this.position.y + 1.25, this.position.z);
     }
   }
 

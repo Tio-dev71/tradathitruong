@@ -446,7 +446,20 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
       return;
     }
 
-    root.position.y = 0;
+    // Jump pose if in air
+    if (root.position.y > 0.06) {
+      leftLeg.rotation.x = -0.42;
+      rightLeg.rotation.x = -0.22;
+      leftArm.rotation.x = -0.55;
+      leftArm.rotation.z = 0.28;
+      rightArm.rotation.x = -0.55;
+      rightArm.rotation.z = -0.28;
+      headGroup.position.y = 1.05;
+      bodyMesh.rotation.x = -0.06;
+      return;
+    } else {
+      root.position.y = 0;
+    }
 
     // Emote Animations (Hand actions swing forward towards +Z where the face is)
     if (emote === 'wave') {

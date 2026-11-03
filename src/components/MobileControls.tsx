@@ -4,10 +4,13 @@ interface Props {
   onJoystickMove: (vector: { x: number; y: number }) => void;
   onInteract: () => void;
   onRunToggle: (isRunning: boolean) => void;
+  onJump?: () => void;
   onToggleSit?: () => void;
   isSitting?: boolean;
   onToggleCameraMode?: () => void;
   cameraMode?: 'third' | 'first';
+  autoFollowCamera?: boolean;
+  onToggleAutoFollow?: () => void;
   canInteract?: boolean;
   onToggleMic?: () => void;
   isMicOn?: boolean;
@@ -18,10 +21,13 @@ export const MobileControls: React.FC<Props> = ({
   onJoystickMove,
   onInteract,
   onRunToggle,
+  onJump,
   onToggleSit,
   isSitting = false,
   onToggleCameraMode,
   cameraMode = 'third',
+  autoFollowCamera = true,
+  onToggleAutoFollow,
   canInteract = false,
   onToggleMic,
   isMicOn = false,
@@ -174,6 +180,20 @@ export const MobileControls: React.FC<Props> = ({
                 title="Ngồi / Đứng"
               >
                 <span>{isSitting ? '🧍' : '🪑'}</span>
+              </button>
+            )}
+
+            {/* Jump Button */}
+            {onJump && (
+              <button
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  onJump();
+                }}
+                className="w-11 h-11 rounded-full border-2 bg-black/60 text-amber-300 border-amber-700/80 flex items-center justify-center font-bold text-xs shadow-lg transition active:scale-95"
+                title="Nhảy lên"
+              >
+                <span>🦘</span>
               </button>
             )}
 
