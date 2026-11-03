@@ -5,9 +5,10 @@ import { soundEngine } from '../services/soundEngine';
 
 interface Props {
   onEmote?: (emote: 'wave' | 'laugh' | 'sip_tea' | 'shrug' | 'cheer') => void;
+  onSendChat?: (text: string) => void;
 }
 
-export const ChatBox: React.FC<Props> = ({ onEmote }) => {
+export const ChatBox: React.FC<Props> = ({ onEmote, onSendChat }) => {
   const { chatMessages } = useGameStore();
   const [inputText, setInputText] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
@@ -21,10 +22,12 @@ export const ChatBox: React.FC<Props> = ({ onEmote }) => {
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    const text = inputText.trim();
+    if (!text) return;
 
     soundEngine.playUiClick();
-    multiplayerService.sendChat(inputText.trim());
+    onSendChat?.(text);
+    multiplayerService.sendChat(text);
     setInputText('');
   };
 

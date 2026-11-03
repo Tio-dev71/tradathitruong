@@ -173,34 +173,6 @@ export const TopupModal: React.FC = () => {
     }
   };
 
-  // Giả lập thanh toán thành công (dành cho test/demo)
-  const handleSimulateSuccess = async (orderNumber: string) => {
-    soundEngine.playUiClick();
-    setIsChecking(true);
-    try {
-      const res = await fetch(`/api/payments/plisio/simulate-success/${orderNumber}`, {
-        method: 'POST',
-      });
-      const data = await res.json();
-      if (data.success) {
-        setIsSuccess(true);
-        setPaymentStatus('completed');
-        setStatusMessage(data.message);
-        soundEngine.playCoin();
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
-      } else {
-        alert(data.error || 'Giả lập thanh toán thất bại');
-      }
-    } catch (err: any) {
-      alert('Lỗi: ' + err.message);
-    } finally {
-      setIsChecking(false);
-    }
-  };
-
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     setIsCopied(true);
@@ -403,19 +375,6 @@ export const TopupModal: React.FC = () => {
         ) : (
           /* BƯỚC 2: HÓA ĐƠN VÀ KIỂM TRA THANH TOÁN */
           <div className="space-y-4">
-            {/* Banner chế độ test nếu chưa có API Key */}
-            {invoice.isTestMode && (
-              <div className="p-3 rounded-2xl bg-amber-950/80 border border-amber-600/80 text-amber-200 text-xs flex items-start gap-2.5">
-                <span className="text-xl">⚠️</span>
-                <div>
-                  <div className="font-bold">Chế độ Test / Demo (Chưa cài PLISIO_API_KEY)</div>
-                  <div className="text-[11px] text-amber-300/80 mt-0.5">
-                    Để thanh toán tiền thật, bạn chỉ cần điền <code className="bg-black/50 px-1 py-0.5 rounded text-amber-300">PLISIO_API_KEY</code> vào file <code className="bg-black/50 px-1 py-0.5 rounded text-amber-300">.env</code>.
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Thông tin đơn hàng */}
             <div className="p-4 rounded-2xl bg-stone-900/90 border border-stone-800 space-y-2 text-xs">
               <div className="flex justify-between items-center">
@@ -503,8 +462,8 @@ export const TopupModal: React.FC = () => {
               </div>
             )}
 
-            {/* Nút kiểm tra API và nút Giả lập Test */}
-            <div className="space-y-2 pt-1">
+            {/* Nút kiểm tra API */}
+            <div className="pt-1">
               <button
                 disabled={isChecking}
                 onClick={() => checkStatus(invoice.orderNumber)}
@@ -521,17 +480,6 @@ export const TopupModal: React.FC = () => {
                     <span>Kiểm Tra Thanh Toán Ngay (API Check)</span>
                   </>
                 )}
-              </button>
-
-              {/* Nút Giả lập thanh toán thành công (dành cho test luồng nhanh) */}
-              <button
-                disabled={isChecking}
-                onClick={() => handleSimulateSuccess(invoice.orderNumber)}
-                className="w-full py-2.5 px-4 rounded-xl bg-stone-800 hover:bg-stone-700 text-amber-300 text-xs font-medium border border-stone-700 transition cursor-pointer flex items-center justify-center gap-1.5"
-                title="Bấm nút này để giả lập nhận tiền thành công ngay lập tức để thử nghiệm luồng cộng xu"
-              >
-                <span>🧪</span>
-                <span>[Test Dev] Giả Lập Đã Nhận Tiền Thành Công</span>
               </button>
             </div>
 

@@ -220,6 +220,12 @@ export class WorldScene {
     remote.data.currentEmote = emote;
   }
 
+  public showPlayerSpeech(id: string, text: string) {
+    const remote = this.remotePlayers.get(id);
+    if (!remote) return;
+    remote.rig.showSpeech(text);
+  }
+
   public removeRemotePlayer(id: string) {
     const remote = this.remotePlayers.get(id);
     if (!remote) return;

@@ -10,8 +10,11 @@ export interface AvatarRig {
   leftLeg: THREE.Group;
   rightLeg: THREE.Group;
   nametagSprite: THREE.Sprite;
+  speechSprite: THREE.Sprite;
   updateAnimation: (time: number, isMoving: boolean, isRunning: boolean, isSitting: boolean, emote?: string) => void;
   updateNametag: (nickname: string, role: PlayerRole) => void;
+  showSpeech: (text: string, durationMs?: number) => void;
+  hideSpeech: () => void;
 }
 
 export function createNametagTexture(nickname: string, role: string): THREE.CanvasTexture {
@@ -50,6 +53,108 @@ export function createNametagTexture(nickname: string, role: string): THREE.Canv
   ctx.fillText(nickname, 256, 114);
 
   const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+export function createPlayerSpeechTexture(text: string): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.clearRect(0, 0, 512, 256);
+
+  const cleanText = text.trim();
+  const isShort = cleanText.length <= 8;
+  const fontSize = isShort ? 46 : cleanText.length <= 22 ? 32 : 24;
+  const lineHeight = fontSize + 8;
+  ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+
+  // Multiline wrapping
+  const words = cleanText.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const width = ctx.measureText(testLine).width;
+    if (width > 400 && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+      if (lines.length >= 3) break;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine && lines.length < 3) {
+    lines.push(currentLine);
+  }
+
+  // Draw speech bubble (rounded rectangle + tail)
+  const bubbleX = 28;
+  const bubbleY = 16;
+  const bubbleW = 456;
+  const bubbleH = 164;
+  const radius = 24;
+
+  // 1. Shadow for visual separation
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 6;
+
+  // Bubble background fill
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, radius);
+  ctx.fill();
+
+  // Pointer tail pointing down towards the avatar's nametag/head
+  ctx.beginPath();
+  ctx.moveTo(234, bubbleY + bubbleH - 1);
+  ctx.lineTo(256, bubbleY + bubbleH + 34);
+  ctx.lineTo(278, bubbleY + bubbleH - 1);
+  ctx.closePath();
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.restore();
+
+  // 2. Thick comic border
+  ctx.strokeStyle = '#2b1810';
+  ctx.lineWidth = 5.5;
+  ctx.beginPath();
+  ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, radius);
+  ctx.stroke();
+
+  // Pointer tail stroke
+  ctx.beginPath();
+  ctx.moveTo(233, bubbleY + bubbleH - 2);
+  ctx.lineTo(256, bubbleY + bubbleH + 34);
+  ctx.lineTo(279, bubbleY + bubbleH - 2);
+  ctx.stroke();
+
+  // Seamless joint patch between bubble and pointer tail
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(235, bubbleY + bubbleH - 5, 42, 8);
+
+  // 3. Render Text
+  ctx.fillStyle = '#1c120c';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const totalTextHeight = lines.length * lineHeight;
+  const centerY = bubbleY + bubbleH / 2;
+  const startY = centerY - totalTextHeight / 2 + lineHeight / 2;
+
+  lines.forEach((lineText, idx) => {
+    ctx.fillText(lineText, 256, startY + idx * lineHeight);
+  });
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
   texture.needsUpdate = true;
   return texture;
 }
@@ -238,6 +343,48 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
   nametagSprite.scale.set(1.5, 0.5, 1);
   root.add(nametagSprite);
 
+  // --- Overhead Chat Speech Bubble Sprite ---
+  const speechSpriteMat = new THREE.SpriteMaterial({ depthTest: false, transparent: true });
+  const speechSprite = new THREE.Sprite(speechSpriteMat);
+  speechSprite.position.set(0, 2.45, 0);
+  speechSprite.scale.set(1.75, 0.88, 1);
+  speechSprite.renderOrder = 1000;
+  speechSprite.visible = false;
+  root.add(speechSprite);
+
+  let speechTimeout: NodeJS.Timeout | null = null;
+
+  const showSpeech = (text: string, durationMs = 5000) => {
+    if (!text || !text.trim()) return;
+
+    if (speechTimeout) {
+      clearTimeout(speechTimeout);
+      speechTimeout = null;
+    }
+
+    if (speechSprite.material.map) {
+      speechSprite.material.map.dispose();
+    }
+
+    const tex = createPlayerSpeechTexture(text);
+    speechSprite.material.map = tex;
+    speechSprite.material.needsUpdate = true;
+    speechSprite.visible = true;
+
+    speechTimeout = setTimeout(() => {
+      speechSprite.visible = false;
+      speechTimeout = null;
+    }, durationMs);
+  };
+
+  const hideSpeech = () => {
+    if (speechTimeout) {
+      clearTimeout(speechTimeout);
+      speechTimeout = null;
+    }
+    speechSprite.visible = false;
+  };
+
   // --- Animation Update Method ---
   const updateAnimation = (time: number, isMoving: boolean, isRunning: boolean, isSitting: boolean, emote?: string) => {
     if (isSitting) {
@@ -364,8 +511,11 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
     leftLeg,
     rightLeg,
     nametagSprite,
+    speechSprite,
     updateAnimation,
     updateNametag,
+    showSpeech,
+    hideSpeech,
   };
 }
 

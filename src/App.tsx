@@ -354,10 +354,30 @@ export function App() {
         },
         onPlayerEmoted: (data) => {
           world.updateRemotePlayerEmote(data.id, data.emote);
+          const emoteLabels: Record<string, string> = {
+            wave: '👋 Chào cả nhà!',
+            laugh: '😂 Haha!',
+            sip_tea: '🍵 Nhấp ngụm trà...',
+            shrug: '🤷 Biết đâu bất ngờ!',
+            cheer: '🎉 Kèo thơm quá!',
+          };
+          if (emoteLabels[data.emote]) {
+            world.showPlayerSpeech(data.id, emoteLabels[data.emote]);
+          }
         },
         onChatMessage: (msg) => {
           addChatMessage(msg);
           soundEngine.playNotification();
+
+          // Hiển thị bóng chat trên đầu (overhead speech bubble)
+          if (!msg.isSystem && msg.playerId && msg.playerId !== 'system' && msg.playerId !== 'street' && msg.playerId !== 'dog') {
+            const currentSession = useGameStore.getState().player;
+            if (localAvatarRigRef.current && currentSession && (msg.playerId === currentSession.id || msg.playerId === sessionId)) {
+              localAvatarRigRef.current.showSpeech(msg.text);
+            } else {
+              world.showPlayerSpeech(msg.playerId, msg.text);
+            }
+          }
         },
         onSignalResponse: (result: SignalDecisionResult) => {
           setCooldown(result.cooldownSeconds, result.nextAllowedAt);
@@ -432,6 +452,16 @@ export function App() {
     if (playerControllerRef.current) {
       playerControllerRef.current.playEmote(emote);
     }
+    const emoteLabels: Record<string, string> = {
+      wave: '👋 Chào cả nhà!',
+      laugh: '😂 Haha!',
+      sip_tea: '🍵 Nhấp ngụm trà...',
+      shrug: '🤷 Biết đâu bất ngờ!',
+      cheer: '🎉 Kèo thơm quá!',
+    };
+    if (emoteLabels[emote]) {
+      localAvatarRigRef.current?.showSpeech(emoteLabels[emote]);
+    }
     multiplayerService.sendEmote(emote);
   };
 
@@ -451,7 +481,12 @@ export function App() {
       {!isCreateModalOpen && (
         <>
           <HUD onToggleSit={handleToggleSit} isSitting={isSitting} />
-          <ChatBox onEmote={handleTriggerEmote} />
+          <ChatBox
+            onEmote={handleTriggerEmote}
+            onSendChat={(text) => {
+              localAvatarRigRef.current?.showSpeech(text);
+            }}
+          />
           <DialoguePanel />
           <SignalCard />
           <MobileControls
