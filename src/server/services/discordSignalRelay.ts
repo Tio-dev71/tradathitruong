@@ -28,6 +28,48 @@ export interface DiscordMessagePayload {
   embeds?: DiscordEmbed[];
 }
 
+/**
+ * Strips parentheses and percentage annotations, e.g. "(1%)", "(-2%)", "(+1.5%)"
+ */
+export function cleanPriceString(raw: string): string {
+  if (!raw) return '';
+  let cleaned = raw.replace(/\s*\([+\-]?[0-9.]+%?\)/g, '').trim();
+  cleaned = cleaned.replace(/\s+/g, ' ');
+  return cleaned;
+}
+
+/**
+ * Extracts numeric value, decimal precision, and currency prefix from price string
+ */
+export function extractPriceNumber(val: string): { num: number; decimals: number; prefix: string } | null {
+  if (!val) return null;
+  const cleaned = cleanPriceString(val);
+  const match = cleaned.match(/([$€£₫]?)\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)/);
+  if (!match) return null;
+  const prefix = match[1] || '';
+  const numStr = match[2].replace(/,/g, '');
+  const num = parseFloat(numStr);
+  if (isNaN(num)) return null;
+
+  const dotIdx = numStr.indexOf('.');
+  const decimals = dotIdx >= 0 ? numStr.length - dotIdx - 1 : 0;
+  return { num, decimals, prefix };
+}
+
+/**
+ * Formats a numeric price with thousands commas, decimal places, and currency prefix
+ */
+export function formatPrice(num: number, decimals: number, prefix: string = '$'): string {
+  const dec = Math.max(0, decimals);
+  const factor = Math.pow(10, dec);
+  // Round half-up to avoid IEEE-754 precision issues (e.g. 77092.025 -> 77092.03)
+  const rounded = Math.round(num * factor + 1e-9) / factor;
+  const parts = rounded.toFixed(dec).split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const formatted = parts.join('.');
+  return `${prefix}${formatted}`.trim();
+}
+
 export class DiscordSignalRelayService {
   private io: SocketIOServer | null = null;
   private processedMessageIds = new Set<string>();
@@ -106,27 +148,79 @@ export class DiscordSignalRelayService {
     if (tfMatch) timeframe = tfMatch[1].toLowerCase();
 
     // 5. Entry
-    let entry = fieldsMap.get('entry 1') || fieldsMap.get('entry') || fieldsMap.get('vào') || '';
-    if (!entry) {
-      const eMatch = textBlob.match(/entry(?:\s*1)?[\s:]*([$0-9.,]+)/i);
-      if (eMatch) entry = eMatch[1];
-      else entry = 'Thị giá hiện tại';
+    // Check if both Entry 1 and Entry 2 are provided (common in DCA / multi-entry signals)
+    let rawEntry1 = fieldsMap.get('entry 1') || fieldsMap.get('entry1') || fieldsMap.get('vào 1') || '';
+    let rawEntry2 = fieldsMap.get('entry 2') || fieldsMap.get('entry2') || fieldsMap.get('vào 2') || '';
+
+    if (!rawEntry1) {
+      const m1 = textBlob.match(/entry\s*1[\s:]*([^\n\r]+)/i);
+      if (m1) rawEntry1 = m1[1].trim();
+    }
+    if (!rawEntry2) {
+      const m2 = textBlob.match(/entry\s*2[\s:]*([^\n\r]+)/i);
+      if (m2) rawEntry2 = m2[1].trim();
     }
 
-    // 6. Stop Loss
-    let stopLoss = fieldsMap.get('sl') || fieldsMap.get('stop loss') || fieldsMap.get('cắt lỗ') || '';
-    if (!stopLoss) {
-      const slMatch = textBlob.match(/(?:sl|stop\s*loss)[\s:]*([$0-9.,]+)/i);
-      if (slMatch) stopLoss = slMatch[1];
-      else stopLoss = 'Theo quản lý vốn';
+    let entry = '';
+    const p1 = extractPriceNumber(rawEntry1);
+    const p2 = extractPriceNumber(rawEntry2);
+
+    if (p1 && p2) {
+      // Yêu cầu: khi có thông tin entry 1 và entry 2 -> hiện 1 entry duy nhất = (entry 1 + entry 2) / 2
+      const avg = (p1.num + p2.num) / 2;
+      let dec = Math.max(p1.decimals, p2.decimals);
+      if (dec === 0 && avg % 1 !== 0) {
+        dec = 1;
+      }
+      const prefix = p1.prefix || p2.prefix || (rawEntry1.includes('$') || rawEntry2.includes('$') ? '$' : '');
+      entry = formatPrice(avg, dec, prefix);
+    } else if (p1) {
+      entry = cleanPriceString(rawEntry1);
+    } else if (p2) {
+      entry = cleanPriceString(rawEntry2);
+    } else {
+      let genericEntry = fieldsMap.get('entry') || fieldsMap.get('vào') || '';
+      if (!genericEntry) {
+        const eMatch = textBlob.match(/entry[\s:]*([^\n\r]+)/i);
+        if (eMatch) genericEntry = eMatch[1].trim();
+      }
+      entry = genericEntry ? cleanPriceString(genericEntry) : 'Thị giá hiện tại';
     }
 
-    // 7. Take Profit
-    let tp = fieldsMap.get('tp') || fieldsMap.get('take profit') || fieldsMap.get('chốt lời') || '';
-    if (!tp) {
-      const tpMatch = textBlob.match(/(?:tp|take\s*profit)[\s:]*([$0-9.,]+)/i);
-      if (tpMatch) tp = tpMatch[1];
-      else tp = 'Mục tiêu 1:2';
+    // 6. Stop Loss - lấy đúng như tín hiệu được bắn lên
+    let rawSL = fieldsMap.get('sl') || fieldsMap.get('stop loss') || fieldsMap.get('cắt lỗ') || '';
+    if (!rawSL) {
+      const slMatch = textBlob.match(/(?:sl|stop\s*loss)[\s:]*([^\n\r]+)/i);
+      if (slMatch) rawSL = slMatch[1].trim();
+    }
+    const stopLoss = rawSL ? cleanPriceString(rawSL) : 'Theo quản lý vốn';
+
+    // 7. Take Profit - lấy đúng như tín hiệu được bắn lên
+    const tpList: string[] = [];
+    if (fieldsMap.has('tp 1') || fieldsMap.has('tp1')) {
+      for (let i = 1; i <= 5; i++) {
+        const val = fieldsMap.get(`tp ${i}`) || fieldsMap.get(`tp${i}`);
+        if (val) tpList.push(cleanPriceString(val));
+      }
+    }
+
+    if (tpList.length === 0) {
+      let rawTP = fieldsMap.get('tp') || fieldsMap.get('take profit') || fieldsMap.get('chốt lời') || '';
+      if (!rawTP) {
+        const tpMatch = textBlob.match(/(?:tp|take\s*profit)[\s:]*([^\n\r]+)/i);
+        if (tpMatch) rawTP = tpMatch[1].trim();
+      }
+      if (rawTP) {
+        // Split if multiple TPs separated by newline, semicolon, pipe, slash, or comma followed by currency
+        const parts = rawTP.split(/[\n;|\/]+|,\s*(?=[$€£₫])/).map((s) => cleanPriceString(s)).filter(Boolean);
+        if (parts.length > 0) {
+          tpList.push(...parts);
+        } else {
+          tpList.push(cleanPriceString(rawTP));
+        }
+      } else {
+        tpList.push('Mục tiêu 1:2');
+      }
     }
 
     // 8. Event
@@ -138,7 +232,7 @@ export class DiscordSignalRelayService {
       direction,
       entry,
       stopLoss,
-      takeProfit: [tp],
+      takeProfit: tpList,
       timeframe,
       note: `Lệnh nhóm VIP - Bot Liquidation [Trạng thái: ${event}]`,
       source: 'Trading-Bot_TLS1 (Discord VIP)',

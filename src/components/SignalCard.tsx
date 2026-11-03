@@ -86,7 +86,7 @@ export const SignalCard: React.FC = () => {
                 key={idx}
                 className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 font-mono font-bold"
               >
-                TP{idx + 1}: {tp}
+                {activeSignal.takeProfit.length === 1 ? 'TP' : `TP${idx + 1}`}: {tp}
               </span>
             ))}
           </div>

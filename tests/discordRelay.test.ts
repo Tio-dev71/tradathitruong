@@ -26,10 +26,36 @@ describe('Discord TradingView Bot Signal Relay & Embed Parser', () => {
     expect(parsed?.direction).toBe('SHORT');
     expect(parsed?.market).toBe('CRYPTO');
     expect(parsed?.timeframe).toBe('m1');
-    expect(parsed?.entry).toBe('$1.25 (1%)');
+    expect(parsed?.entry).toBe('$1.25');
     expect(parsed?.stopLoss).toBe('$1.26');
     expect(parsed?.takeProfit).toContain('$1.24');
     expect(parsed?.note).toContain('Lệnh nhóm VIP - Bot Liquidation');
+  });
+
+  it('correctly calculates unified average entry from Entry 1 and Entry 2 and extracts SL & TP', () => {
+    const btcEmbed: DiscordEmbed = {
+      title: 'Lệnh nhóm VIP - Bot Liquidation',
+      fields: [
+        { name: 'Side:', value: '🔴 SHORT 🔴' },
+        { name: 'Coin:', value: 'BTC/USD' },
+        { name: 'Timeframe:', value: 'm1' },
+        { name: 'TP:', value: '$76,918.39' },
+        { name: 'Entry 1:', value: '$77,012.01 (1%)' },
+        { name: 'Entry 2:', value: '$77,172.04 (2%)' },
+        { name: 'SL:', value: '$77,252.06' },
+        { name: 'Event:', value: 'Entry' },
+      ],
+      footer: { text: 'Nội dung chỉ có mục đích thông tin, không phải lời khuyên đầu tư. https://traderlaso1.io.vn' },
+    };
+
+    const parsed = discordSignalRelay.parseTradingBotEmbed(btcEmbed);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.symbol).toBe('BTC/USD');
+    expect(parsed?.direction).toBe('SHORT');
+    // Average = (77012.01 + 77172.04) / 2 = 77092.025 -> rounded to 2 decimals: $77,092.03
+    expect(parsed?.entry).toBe('$77,092.03');
+    expect(parsed?.stopLoss).toBe('$77,252.06');
+    expect(parsed?.takeProfit).toEqual(['$76,918.39']);
   });
 
   it('correctly parses Gold XAU/USD signal from bot', () => {
