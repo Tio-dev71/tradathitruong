@@ -111,3 +111,4 @@ describe('Plisio Payment & Xu Credit System', () => {
     expect(db.getSession(testSessionId)?.credits).toBe(initialCredits + 500);
   });
 });
+
