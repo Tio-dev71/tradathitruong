@@ -15,6 +15,7 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
     settings,
     toggleSound,
     setIsAdminOpen,
+    setIsTopupOpen,
     cooldownRemaining,
     creditsNotification,
     marketTickers,
@@ -105,6 +106,19 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
             <span className="text-sm">🪙</span>
             <span>{player ? player.credits : 100} Xu</span>
           </div>
+
+          {/* Nút Nạp Xu qua Plisio (5u = 100 Xu) */}
+          <button
+            onClick={() => {
+              soundEngine.playUiClick();
+              setIsTopupOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 hover:from-amber-400 to-yellow-500 hover:to-yellow-400 text-stone-950 text-xs font-black shadow-lg transition active:scale-95 cursor-pointer pointer-events-auto border border-yellow-300"
+            title="Nạp Xu qua ví Plisio (Tỷ lệ: 5 USDT = 100 Xu)"
+          >
+            <span className="text-sm">⚡</span>
+            <span>Nạp Xu</span>
+          </button>
 
           {/* Tea Consumed & Luck Boost Badge */}
           <div

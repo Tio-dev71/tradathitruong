@@ -15,6 +15,7 @@ import { DialoguePanel } from './components/DialoguePanel';
 import { SignalCard } from './components/SignalCard';
 import { MobileControls } from './components/MobileControls';
 import { AdminDashboard } from './components/AdminDashboard';
+import { TopupModal } from './components/TopupModal';
 
 import type { AvatarConfig, PlayerData, PlayerRole } from './types/game';
 import type { SignalDecisionResult } from './types/signal';
@@ -314,6 +315,10 @@ export function App() {
           });
         },
         onCreditsUpdate: (data) => {
+          const currentPlayer = useGameStore.getState().player;
+          if (data.playerId && currentPlayer && data.playerId !== currentPlayer.id) {
+            return;
+          }
           updateCredits(data.credits, data.teaCount);
           setCreditsNotification(data.message);
           soundEngine.playCoin();
@@ -467,6 +472,9 @@ export function App() {
 
       {/* Admin Panel Modal */}
       <AdminDashboard />
+
+      {/* Plisio Xu Topup Modal */}
+      <TopupModal />
     </div>
   );
 }

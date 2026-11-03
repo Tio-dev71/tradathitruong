@@ -4,7 +4,7 @@ import { multiplayerService } from '../services/multiplayerService';
 import { soundEngine } from '../services/soundEngine';
 
 export const DialoguePanel: React.FC = () => {
-  const { dialogue, closeDialogue, cooldownRemaining } = useGameStore();
+  const { dialogue, closeDialogue, cooldownRemaining, setIsTopupOpen } = useGameStore();
   const [displayedText, setDisplayedText] = useState('');
 
   // Typewriter effect
@@ -34,8 +34,14 @@ export const DialoguePanel: React.FC = () => {
   const handleOptionClick = (action: string) => {
     soundEngine.playUiClick();
 
-    if (action === 'close') {
+    if (action === 'close' || action === 'leave') {
       closeDialogue();
+      return;
+    }
+
+    if (action === 'open_topup') {
+      closeDialogue();
+      setIsTopupOpen(true);
       return;
     }
 

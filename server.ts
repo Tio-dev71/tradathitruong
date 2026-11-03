@@ -7,6 +7,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { db } from './src/server/db/database';
 import { webhookRouter } from './src/server/routes/webhookRoutes';
 import { adminRouter } from './src/server/routes/adminRoutes';
+import { paymentRouter } from './src/server/routes/paymentRoutes';
 import { setupMultiplayerSocket } from './src/server/socket/multiplayerHandler';
 import { discordSignalRelay } from './src/server/services/discordSignalRelay';
 import { marketPriceService } from './src/server/services/marketPriceService';
@@ -45,6 +46,7 @@ app.use('/audio', express.static(path.join(__dirname, 'public/assets/audio')));
 app.use('/assets/audio', express.static(path.join(__dirname, 'public/assets/audio')));
 app.use('/api/webhooks', webhookRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/payments', paymentRouter);
 
 // Market Price Endpoints (Free Binance Public API & Tiệm Vàng DJN Live Feeds)
 app.get('/api/market-prices', (_req, res) => {

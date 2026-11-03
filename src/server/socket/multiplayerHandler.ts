@@ -73,7 +73,39 @@ class ActivePlayersStore {
 
 export const activePlayersStore = new ActivePlayersStore();
 
+let ioInstance: SocketIOServer | null = null;
+
+export function broadcastCreditUpdate(sessionId: string, newCredits: number, creditsAdded: number) {
+  const online = activePlayersStore.getOnlinePlayers();
+  const player = online.find((p) => p.id === sessionId);
+  if (player) {
+    player.credits = newCredits;
+  }
+
+  if (ioInstance) {
+    ioInstance.emit('player:credits_update', {
+      playerId: sessionId,
+      credits: newCredits,
+      teaCount: player?.teaCount ?? 0,
+      cost: 0,
+      action: 'topup',
+      message: `🎉 Nạp thành công +${creditsAdded} Xu! Số dư hiện tại: ${newCredits} Xu.`,
+    });
+
+    ioInstance.emit('chat:received', {
+      id: `topup_${Date.now()}`,
+      senderId: 'SYSTEM',
+      senderName: 'Hội Quán Trà Đá',
+      senderRole: 'Trà Quán',
+      content: `🎉 ${player ? player.nickname : 'Đại gia'} vừa nạp thành công ${creditsAdded} Xu! Tha hồ gọi trà đá và xin quẻ!`,
+      timestamp: Date.now(),
+      type: 'system',
+    });
+  }
+}
+
 export function setupMultiplayerSocket(io: SocketIOServer) {
+  ioInstance = io;
   io.on('connection', (socket: Socket) => {
     // 1. Join game room
     socket.on('player:join', (rawData: unknown) => {
@@ -261,11 +293,15 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
         // 1 Cốc Trà Đá giá 10 credits
         const teaCost = 10;
         if (player.credits < teaCost) {
-          const refuseQuote = `Hết xèng rồi con ơi! 10 xu một cốc trà đá mát lạnh, mà trong túi con chỉ còn ${player.credits} xu thôi! Ra ghế ngồi hóng chuyện thị trường đi, bao giờ có lộc hãy uống!`;
+          const refuseQuote = `Hết xèng rồi con ơi! 10 xu một cốc trà đá mát lạnh, mà trong túi con chỉ còn ${player.credits} xu thôi! Ra ghế ngồi hóng chuyện thị trường đi hoặc nạp thêm xu nhé!`;
           socket.emit('npc:dialogue_reply', {
             action: data.action,
             speaker: 'Bà Bán Trà',
             text: refuseQuote,
+            options: [
+              { id: '1', label: '⚡ Nạp Thêm Xu (5u = 100 Xu)', action: 'open_topup' },
+              { id: '2', label: 'Con ra ghế ngồi hóng vậy...', action: 'leave' },
+            ],
           });
           io.emit('npc:speech', {
             speaker: 'Bà Bán Trà',
@@ -332,11 +368,15 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
         // Xin quẻ Thầy Đồ Xóc Đĩa tốn 15 credits
         const queCost = 15;
         if (player.credits < queCost) {
-          const refuseQuote = `Quẻ thánh linh nghiệm vô cùng, thiên cơ bất khả lộ miễn phí con ơi! Xin một quẻ xóc đĩa tốn 15 xu, mà con còn có ${player.credits} xu thôi, mau ra xin lộc bà bán nước đi!`;
+          const refuseQuote = `Quẻ thánh linh nghiệm vô cùng, thiên cơ bất khả lộ miễn phí con ơi! Xin một quẻ xóc đĩa tốn 15 xu, mà con còn có ${player.credits} xu thôi, mau nạp thêm lộc vào hầu bao đi!`;
           socket.emit('npc:dialogue_reply', {
             action: data.action,
             speaker: 'Thầy Đồ Xóc Đĩa',
             text: refuseQuote,
+            options: [
+              { id: '1', label: '⚡ Nạp Thêm Xu (5u = 100 Xu)', action: 'open_topup' },
+              { id: '2', label: 'Con lùi lại xem người khác xóc...', action: 'leave' },
+            ],
           });
           io.emit('thay_do:speech', {
             speaker: 'Thầy Đồ Xóc Đĩa',

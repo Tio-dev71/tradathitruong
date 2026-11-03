@@ -69,6 +69,24 @@ export class AppDatabase {
         created_at INTEGER NOT NULL
       );
 
+      CREATE TABLE IF NOT EXISTS payment_orders (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        order_number TEXT UNIQUE NOT NULL,
+        plisio_txn_id TEXT,
+        amount_usd REAL NOT NULL,
+        credits INTEGER NOT NULL,
+        currency TEXT,
+        crypto_amount REAL,
+        wallet_hash TEXT,
+        qr_code TEXT,
+        invoice_url TEXT,
+        status TEXT NOT NULL DEFAULT 'new',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        completed_at INTEGER
+      );
+
       CREATE TABLE IF NOT EXISTS app_config (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
@@ -152,6 +170,13 @@ export class AppDatabase {
       const stmt = this.db.prepare('UPDATE sessions SET credits = ?, last_seen_at = ? WHERE id = ?');
       stmt.run(credits, Date.now(), id);
     }
+  }
+
+  public addSessionCredits(id: string, creditsToAdd: number): number {
+    const session = this.getSession(id);
+    const newCredits = (session ? session.credits : 0) + creditsToAdd;
+    this.updateSessionCredits(id, newCredits);
+    return newCredits;
   }
 
   // Signal helpers
@@ -276,6 +301,181 @@ export class AppDatabase {
     `);
     return stmt.all(limit) as { eventId: string; status: 'SUCCESS' | 'ERROR'; reason?: string; timestamp: number }[];
   }
+
+  // Payment Orders (Plisio)
+  public createPaymentOrder(order: PaymentOrder) {
+    const stmt = this.db.prepare(`
+      INSERT INTO payment_orders (
+        id, session_id, order_number, plisio_txn_id, amount_usd, credits,
+        currency, crypto_amount, wallet_hash, qr_code, invoice_url, status,
+        created_at, updated_at, completed_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      order.id,
+      order.sessionId,
+      order.orderNumber,
+      order.plisioTxnId || null,
+      order.amountUsd,
+      order.credits,
+      order.currency || null,
+      order.cryptoAmount || null,
+      order.walletHash || null,
+      order.qrCode || null,
+      order.invoiceUrl || null,
+      order.status,
+      order.createdAt,
+      order.updatedAt,
+      order.completedAt || null
+    );
+  }
+
+  public getPaymentOrderByOrderNumber(orderNumber: string): PaymentOrder | undefined {
+    const stmt = this.db.prepare('SELECT * FROM payment_orders WHERE order_number = ?');
+    const row = stmt.get(orderNumber) as any;
+    if (!row) return undefined;
+    return {
+      id: row.id,
+      sessionId: row.session_id,
+      orderNumber: row.order_number,
+      plisioTxnId: row.plisio_txn_id,
+      amountUsd: Number(row.amount_usd),
+      credits: Number(row.credits),
+      currency: row.currency,
+      cryptoAmount: row.crypto_amount ? Number(row.crypto_amount) : null,
+      walletHash: row.wallet_hash,
+      qrCode: row.qr_code,
+      invoiceUrl: row.invoice_url,
+      status: row.status,
+      createdAt: Number(row.created_at),
+      updatedAt: Number(row.updated_at),
+      completedAt: row.completed_at ? Number(row.completed_at) : null,
+    };
+  }
+
+  public getPaymentOrderById(id: string): PaymentOrder | undefined {
+    const stmt = this.db.prepare('SELECT * FROM payment_orders WHERE id = ?');
+    const row = stmt.get(id) as any;
+    if (!row) return undefined;
+    return {
+      id: row.id,
+      sessionId: row.session_id,
+      orderNumber: row.order_number,
+      plisioTxnId: row.plisio_txn_id,
+      amountUsd: Number(row.amount_usd),
+      credits: Number(row.credits),
+      currency: row.currency,
+      cryptoAmount: row.crypto_amount ? Number(row.crypto_amount) : null,
+      walletHash: row.wallet_hash,
+      qrCode: row.qr_code,
+      invoiceUrl: row.invoice_url,
+      status: row.status,
+      createdAt: Number(row.created_at),
+      updatedAt: Number(row.updated_at),
+      completedAt: row.completed_at ? Number(row.completed_at) : null,
+    };
+  }
+
+  public updatePaymentOrderStatus(
+    orderNumber: string,
+    status: PaymentOrder['status'],
+    details?: Partial<PaymentOrder>
+  ) {
+    const current = this.getPaymentOrderByOrderNumber(orderNumber);
+    if (!current) return;
+
+    const updatedAt = Date.now();
+    const completedAt = status === 'completed' ? (details?.completedAt || Date.now()) : current.completedAt;
+    const plisioTxnId = details?.plisioTxnId !== undefined ? details.plisioTxnId : current.plisioTxnId;
+    const cryptoAmount = details?.cryptoAmount !== undefined ? details.cryptoAmount : current.cryptoAmount;
+    const walletHash = details?.walletHash !== undefined ? details.walletHash : current.walletHash;
+    const qrCode = details?.qrCode !== undefined ? details.qrCode : current.qrCode;
+    const invoiceUrl = details?.invoiceUrl !== undefined ? details.invoiceUrl : current.invoiceUrl;
+    const currency = details?.currency !== undefined ? details.currency : current.currency;
+
+    const stmt = this.db.prepare(`
+      UPDATE payment_orders SET
+        status = ?,
+        plisio_txn_id = ?,
+        crypto_amount = ?,
+        wallet_hash = ?,
+        qr_code = ?,
+        invoice_url = ?,
+        currency = ?,
+        updated_at = ?,
+        completed_at = ?
+      WHERE order_number = ?
+    `);
+    stmt.run(
+      status,
+      plisioTxnId || null,
+      cryptoAmount || null,
+      walletHash || null,
+      qrCode || null,
+      invoiceUrl || null,
+      currency || null,
+      updatedAt,
+      completedAt || null,
+      orderNumber
+    );
+  }
+
+  public getRecentPaymentOrders(sessionId?: string, limit = 20): PaymentOrder[] {
+    let stmt;
+    let rows: any[];
+    if (sessionId) {
+      stmt = this.db.prepare(`
+        SELECT * FROM payment_orders
+        WHERE session_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `);
+      rows = stmt.all(sessionId, limit) as any[];
+    } else {
+      stmt = this.db.prepare(`
+        SELECT * FROM payment_orders
+        ORDER BY created_at DESC
+        LIMIT ?
+      `);
+      rows = stmt.all(limit) as any[];
+    }
+
+    return rows.map((row) => ({
+      id: row.id,
+      sessionId: row.session_id,
+      orderNumber: row.order_number,
+      plisioTxnId: row.plisio_txn_id,
+      amountUsd: Number(row.amount_usd),
+      credits: Number(row.credits),
+      currency: row.currency,
+      cryptoAmount: row.crypto_amount ? Number(row.crypto_amount) : null,
+      walletHash: row.wallet_hash,
+      qrCode: row.qr_code,
+      invoiceUrl: row.invoice_url,
+      status: row.status,
+      createdAt: Number(row.created_at),
+      updatedAt: Number(row.updated_at),
+      completedAt: row.completed_at ? Number(row.completed_at) : null,
+    }));
+  }
+}
+
+export interface PaymentOrder {
+  id: string;
+  sessionId: string;
+  orderNumber: string;
+  plisioTxnId?: string | null;
+  amountUsd: number;
+  credits: number;
+  currency?: string | null;
+  cryptoAmount?: number | null;
+  walletHash?: string | null;
+  qrCode?: string | null;
+  invoiceUrl?: string | null;
+  status: 'new' | 'pending' | 'completed' | 'expired' | 'cancelled' | 'mismatch';
+  createdAt: number;
+  updatedAt: number;
+  completedAt?: number | null;
 }
 
 export const db = new AppDatabase();

@@ -23,7 +23,7 @@ export interface MultiplayerCallbacks {
   onNpcDialogueReply: (data: { speaker: string; text: string; action: string }) => void;
   onOnlineCount: (count: number) => void;
   onErrorJoin: (data: { message: string }) => void;
-  onCreditsUpdate?: (data: { credits: number; teaCount: number; cost: number; action: string; message: string }) => void;
+  onCreditsUpdate?: (data: { playerId?: string; credits: number; teaCount: number; cost: number; action: string; message: string }) => void;
   onGoldUpdate?: (data: {
     price: number;
     change?: number;

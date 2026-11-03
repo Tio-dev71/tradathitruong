@@ -36,6 +36,7 @@ interface GameState {
   // UI Modals & Notifications
   isAdminOpen: boolean;
   isCreateModalOpen: boolean;
+  isTopupOpen: boolean;
   creditsNotification: string | null;
 
   // Settings
@@ -61,6 +62,7 @@ interface GameState {
   setDialogueText: (text: string, isTyping?: boolean) => void;
   setIsAdminOpen: (open: boolean) => void;
   setIsCreateModalOpen: (open: boolean) => void;
+  setIsTopupOpen: (open: boolean) => void;
   toggleSound: () => void;
 }
 
@@ -74,6 +76,7 @@ export const useGameStore = create<GameState>((set) => ({
   nextAllowedAt: 0,
   isAdminOpen: false,
   isCreateModalOpen: true,
+  isTopupOpen: false,
   creditsNotification: null,
   marketTickers: {},
 
@@ -153,6 +156,7 @@ export const useGameStore = create<GameState>((set) => ({
 
   setIsAdminOpen: (isAdminOpen) => set({ isAdminOpen }),
   setIsCreateModalOpen: (isCreateModalOpen) => set({ isCreateModalOpen }),
+  setIsTopupOpen: (isTopupOpen) => set({ isTopupOpen }),
 
   toggleSound: () =>
     set((state) => ({
