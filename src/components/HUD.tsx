@@ -14,7 +14,6 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
     onlineCount,
     settings,
     toggleSound,
-    setIsAdminOpen,
     setIsTopupOpen,
     cooldownRemaining,
     creditsNotification,
@@ -25,11 +24,6 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
     soundEngine.playUiClick();
     toggleSound();
     soundEngine.toggleMute();
-  };
-
-  const handleAdminToggle = () => {
-    soundEngine.playUiClick();
-    setIsAdminOpen(true);
   };
 
   return (
@@ -167,15 +161,6 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
             title={settings.soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
           >
             {settings.soundEnabled ? '🔊' : '🔇'}
-          </button>
-
-          {/* Admin Dashboard */}
-          <button
-            onClick={handleAdminToggle}
-            className="px-2.5 py-1.5 rounded-xl bg-amber-950 hover:bg-amber-900 border border-amber-600 text-amber-300 text-xs font-bold transition shadow cursor-pointer"
-            title="Quản trị hệ thống"
-          >
-            ⚙️ Admin
           </button>
         </div>
       </div>

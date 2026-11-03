@@ -3,14 +3,18 @@ import { useGameStore } from '../store/gameStore';
 import { soundEngine } from '../services/soundEngine';
 import type { AdminStats } from '../types/signal';
 
-export const AdminDashboard: React.FC = () => {
+interface Props {
+  standalone?: boolean;
+}
+
+export const AdminDashboard: React.FC<Props> = ({ standalone = false }) => {
   const { isAdminOpen, setIsAdminOpen } = useGameStore();
   const [token, setToken] = useState('admin-tra-da-2026');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [acceptRate, setAcceptRate] = useState(0.8);
   const [cooldownSec, setCooldownSec] = useState(60);
-  const [providerMode, setProviderMode] = useState<'MOCK' | 'WEBHOOK'>('MOCK');
+  const [providerMode, setProviderMode] = useState<'MOCK' | 'WEBHOOK'>('WEBHOOK');
   const [loading, setLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
 
@@ -33,12 +37,12 @@ export const AdminDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isAdminOpen) {
+    if (isAdminOpen || standalone) {
       fetchStats();
     }
-  }, [isAdminOpen]);
+  }, [isAdminOpen, standalone]);
 
-  if (!isAdminOpen) return null;
+  if (!isAdminOpen && !standalone) return null;
 
   const handleSaveConfig = async () => {
     soundEngine.playUiClick();
@@ -99,8 +103,8 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto">
-      <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-[#1b120a] border-2 border-amber-600 rounded-3xl p-6 shadow-2xl text-amber-100">
+    <div className={standalone ? "min-h-screen w-full bg-[#120b06] p-4 sm:p-8 flex flex-col items-center justify-start overflow-y-auto select-auto" : "fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto"}>
+      <div className={`relative w-full ${standalone ? 'max-w-5xl my-4' : 'max-w-4xl max-h-[90vh] overflow-y-auto'} bg-[#1b120a] border-2 border-amber-600 rounded-3xl p-6 sm:p-8 shadow-2xl text-amber-100`}>
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-amber-900/60">
           <div className="flex items-center gap-3">
@@ -113,15 +117,24 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              soundEngine.playUiClick();
-              setIsAdminOpen(false);
-            }}
-            className="text-amber-400 hover:text-white p-2 rounded-xl bg-amber-950 border border-amber-800 text-sm cursor-pointer"
-          >
-            ✕ Đóng
-          </button>
+          {standalone ? (
+            <a
+              href="/"
+              className="text-amber-300 hover:text-white px-3.5 py-2 rounded-xl bg-amber-950 border border-amber-700 text-xs font-bold transition flex items-center gap-1.5 shadow"
+            >
+              <span>← Vào Quán Trà</span>
+            </a>
+          ) : (
+            <button
+              onClick={() => {
+                soundEngine.playUiClick();
+                setIsAdminOpen(false);
+              }}
+              className="text-amber-400 hover:text-white p-2 rounded-xl bg-amber-950 border border-amber-800 text-sm cursor-pointer"
+            >
+              ✕ Đóng
+            </button>
+          )}
         </div>
 
         {/* Feedback alert */}

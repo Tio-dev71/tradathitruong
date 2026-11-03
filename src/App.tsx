@@ -23,6 +23,17 @@ import type { SignalDecisionResult } from './types/signal';
 const SESSION_STORAGE_KEY = 'tra_da_session_v1';
 
 export function App() {
+  // Check if navigating directly to Dedicated Admin Route / Subdomain
+  const isAdminRoute =
+    typeof window !== 'undefined' &&
+    (window.location.pathname.startsWith('/admin') ||
+      window.location.hostname.startsWith('admin.') ||
+      new URLSearchParams(window.location.search).has('admin'));
+
+  if (isAdminRoute) {
+    return <AdminDashboard standalone={true} />;
+  }
+
   const containerRef = useRef<HTMLDivElement>(null);
   const worldSceneRef = useRef<WorldScene | null>(null);
   const playerControllerRef = useRef<PlayerController | null>(null);
@@ -504,9 +515,6 @@ export function App() {
           />
         </>
       )}
-
-      {/* Admin Panel Modal */}
-      <AdminDashboard />
 
       {/* Plisio Xu Topup Modal */}
       <TopupModal />
