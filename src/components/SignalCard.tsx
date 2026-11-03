@@ -13,7 +13,7 @@ export const SignalCard: React.FC = () => {
   const cleanNote = activeSignal.note.replace(/DEMO\s*[–-]\s*KHÔNG\s*PHẢI\s*TÍN\s*HIỆU\s*THẬT:\s*/gi, '').trim();
 
   return (
-    <div className="fixed top-20 right-6 z-40 w-full max-w-sm px-2 animate-in fade-in slide-in-from-right duration-300">
+    <div className="fixed top-16 sm:top-20 right-2 sm:right-6 left-2 sm:left-auto z-40 max-w-sm animate-in fade-in slide-in-from-right duration-300">
       <div className="relative bg-[#1c140d]/95 border-2 border-amber-500 rounded-2xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md text-amber-100">
         {/* LIVE REAL SIGNAL BADGE */}
         <div className="mb-3 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-950/90 via-stone-900 to-amber-950/90 border border-emerald-500/80 flex items-center justify-between text-xs shadow-md">

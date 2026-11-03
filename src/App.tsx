@@ -50,6 +50,7 @@ export function App() {
     setCooldown,
     openDialogue,
     setDialogueText,
+    dialogue,
     isCreateModalOpen,
     setIsCreateModalOpen,
     setMarketTickers,
@@ -517,19 +518,26 @@ export function App() {
           />
           <DialoguePanel />
           <SignalCard />
-          <MobileControls
-            onJoystickMove={(vec) => {
-              if (playerControllerRef.current) {
-                playerControllerRef.current.joystickVector = vec;
-              }
-            }}
-            onInteract={handleInteractTrigger}
-            onRunToggle={(run) => {
-              if (playerControllerRef.current) {
-                playerControllerRef.current.isRunning = run;
-              }
-            }}
-          />
+          {!dialogue.isOpen && (
+            <MobileControls
+              onJoystickMove={(vec) => {
+                if (playerControllerRef.current) {
+                  playerControllerRef.current.joystickVector = vec;
+                }
+              }}
+              onInteract={handleInteractTrigger}
+              onRunToggle={(run) => {
+                if (playerControllerRef.current) {
+                  playerControllerRef.current.isRunning = run;
+                }
+              }}
+              onToggleSit={handleToggleSit}
+              isSitting={isSitting}
+              onToggleCameraMode={handleToggleCameraMode}
+              cameraMode={cameraMode}
+              canInteract={canInteractNpc}
+            />
+          )}
         </>
       )}
 

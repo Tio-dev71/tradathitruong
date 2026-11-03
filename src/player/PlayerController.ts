@@ -15,8 +15,8 @@ export class PlayerController {
   private runSpeed = 7.8;
 
   // Camera parameters
-  public cameraDistance = 6.5;
-  public cameraPitch = 0.35; // vertical angle in radians (above ground)
+  public cameraDistance = 6.2;
+  public cameraPitch = 0.25; // vertical angle in radians (above ground - ideal eye level)
   public cameraYaw = 0; // horizontal angle in radians
   private targetCameraPos = new THREE.Vector3();
   public cameraMode: 'third' | 'first' = 'third';
@@ -45,6 +45,11 @@ export class PlayerController {
     this.domElement = domElement;
     this.collisionSystem = collisionSystem;
     this.position.set(initialPos.x, initialPos.y, initialPos.z);
+
+    // On mobile portrait, adjust camera distance for comfortable framing
+    if (typeof window !== 'undefined' && window.innerHeight > window.innerWidth) {
+      this.cameraDistance = 7.2;
+    }
 
     this.bindEvents();
   }
@@ -143,8 +148,8 @@ export class PlayerController {
         // First-person view: look up and down freely (-78 deg to +78 deg)
         this.cameraPitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraPitch + dy * 0.004));
       } else {
-        // Third-person view: stay above ground level
-        this.cameraPitch = Math.max(0.1, Math.min(Math.PI / 2.3, this.cameraPitch + dy * 0.004));
+        // Third-person view: stay above ground level & prevent extreme overhead angle
+        this.cameraPitch = Math.max(0.08, Math.min(0.50, this.cameraPitch + dy * 0.0035));
       }
     });
 
@@ -307,6 +312,9 @@ export class PlayerController {
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         this.cameraYaw += diff * Math.min(1.0, delta * 12);
+
+        // Tự động trả góc nhìn về tầm mắt (0.25 rad) tránh bị góc nhìn từ trên nóc nhà xuống
+        this.cameraPitch += (0.25 - this.cameraPitch) * Math.min(1.0, delta * 3);
       }
 
       const offsetX = Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;

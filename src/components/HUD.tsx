@@ -48,14 +48,14 @@ export const HUD: React.FC<Props> = ({
       {/* Top Bar */}
       <div className="flex items-start justify-between w-full">
         {/* Top-Left: Logo & Tagline */}
-        <div className="pointer-events-auto bg-[#1f140c]/85 border border-amber-600/60 rounded-2xl p-3 shadow-lg backdrop-blur-md">
-          <div className="flex items-center gap-2.5">
-            <span className="text-2xl">🍵</span>
+        <div className="pointer-events-auto bg-[#1f140c]/85 border border-amber-600/60 rounded-xl sm:rounded-2xl p-2 sm:p-3 shadow-lg backdrop-blur-md shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            <span className="text-lg sm:text-2xl">🍵</span>
             <div>
-              <h1 className="text-sm sm:text-base font-black text-amber-300 tracking-wide uppercase">
+              <h1 className="text-xs sm:text-base font-black text-amber-300 tracking-wide uppercase whitespace-nowrap">
                 TRÀ ĐÁ THỊ TRƯỜNG
               </h1>
-              <p className="text-[11px] text-amber-200/80 italic font-serif">
+              <p className="hidden sm:block text-[11px] text-amber-200/80 italic font-serif">
                 "Ngồi xuống uống chén trà, nghe bà soi thị trường."
               </p>
             </div>
@@ -89,23 +89,23 @@ export const HUD: React.FC<Props> = ({
         )}
 
         {/* Top-Right: Player Info, Online Counter & Action Buttons */}
-        <div className="flex items-center gap-2 sm:gap-3 pointer-events-auto">
+        <div className="flex items-center gap-1 sm:gap-2 pointer-events-auto shrink-0 flex-wrap justify-end">
           {/* Online Counter */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/60 border border-emerald-600/60 text-xs font-bold text-emerald-300 backdrop-blur-sm shadow">
-            <span className="relative flex h-2.5 w-2.5">
+          <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-black/60 border border-emerald-600/60 text-[11px] sm:text-xs font-bold text-emerald-300 backdrop-blur-sm shadow">
+            <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span>{onlineCount} Online</span>
+            <span>{onlineCount}<span className="hidden sm:inline"> Online</span></span>
           </div>
 
           {/* Credits Badge (Số Xu) */}
           <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-950/90 to-yellow-950/90 border border-amber-500/80 text-xs font-black text-amber-300 shadow-md backdrop-blur-sm"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-950/90 to-yellow-950/90 border border-amber-500/80 text-[11px] sm:text-xs font-black text-amber-300 shadow backdrop-blur-sm"
             title="Số Xu của bạn (Dùng để uống trà đá và xem quẻ Thầy Đồ)"
           >
-            <span className="text-sm">🪙</span>
-            <span>{player ? player.credits : 100} Xu</span>
+            <span className="text-xs sm:text-sm">🪙</span>
+            <span>{player ? player.credits : 100} <span className="hidden sm:inline">Xu</span></span>
           </div>
 
           {/* Nút Nạp Xu qua Plisio (5u = 100 Xu) */}
@@ -114,51 +114,25 @@ export const HUD: React.FC<Props> = ({
               soundEngine.playUiClick();
               setIsTopupOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 hover:from-amber-400 to-yellow-500 hover:to-yellow-400 text-stone-950 text-xs font-black shadow-lg transition active:scale-95 cursor-pointer pointer-events-auto border border-yellow-300"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-500 hover:from-amber-400 to-yellow-500 hover:to-yellow-400 text-stone-950 text-[11px] sm:text-xs font-black shadow-lg transition active:scale-95 cursor-pointer pointer-events-auto border border-yellow-300"
             title="Nạp Xu qua ví Plisio (Tỷ lệ: 5 USDT = 100 Xu)"
           >
-            <span className="text-sm">⚡</span>
-            <span>Nạp Xu</span>
+            <span className="text-xs sm:text-sm">⚡</span>
+            <span>Nạp<span className="hidden sm:inline"> Xu</span></span>
           </button>
-
-          {/* Tea Consumed & Luck Boost Badge */}
-          <div
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-600/60 text-xs font-bold text-emerald-300 shadow backdrop-blur-sm"
-            title={`Đã uống ${player ? player.teaCount : 0} cốc. Mỗi cốc tăng +5% xác suất được Bà Bán Trà phán kèo VIP!`}
-          >
-            <span className="text-sm">🍵</span>
-            <span>{player ? player.teaCount : 0} Ly (+{Math.min(18, (player ? player.teaCount : 0) * 5)}% Lộc)</span>
-          </div>
-
-          {/* Player Badge */}
-          {player && (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#2b1b11]/90 border border-amber-700/60 text-xs shadow">
-              <span className="font-bold text-white">{player.nickname}</span>
-              <span className="px-2 py-0.5 rounded-md bg-amber-600 text-stone-950 font-extrabold text-[10px]">
-                {player.role}
-              </span>
-            </div>
-          )}
-
-          {/* Cooldown Status Badge */}
-          {cooldownRemaining > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/90 border border-red-600/80 text-xs text-red-200 font-mono shadow">
-              <span>⏳ Chờ kèo:</span>
-              <span className="font-bold text-red-400">{cooldownRemaining}s</span>
-            </div>
-          )}
 
           {/* Sit / Stand button */}
           <button
             onClick={onToggleSit}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition shadow cursor-pointer ${
+            className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border text-[11px] sm:text-xs font-bold transition shadow cursor-pointer flex items-center gap-1 ${
               isSitting
                 ? 'bg-amber-500 text-black border-amber-300'
                 : 'bg-black/60 text-amber-200 border-amber-800 hover:bg-black/80'
             }`}
             title="Ngồi / Đứng dậy"
           >
-            {isSitting ? '🧍 Đứng lên' : '🪑 Ngồi ghế'}
+            <span>{isSitting ? '🧍' : '🪑'}</span>
+            <span className="hidden sm:inline">{isSitting ? 'Đứng lên' : 'Ngồi ghế'}</span>
           </button>
 
           {/* First-person / Third-person View Toggle */}
@@ -168,7 +142,7 @@ export const HUD: React.FC<Props> = ({
                 soundEngine.playUiClick();
                 onToggleCameraMode();
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition shadow cursor-pointer ${
+              className={`flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border text-[11px] sm:text-xs font-bold transition shadow cursor-pointer ${
                 cameraMode === 'first'
                   ? 'bg-amber-500 text-stone-950 border-amber-300 shadow-amber-500/30'
                   : 'bg-black/60 text-amber-200 border-amber-800 hover:bg-black/80'
@@ -176,14 +150,15 @@ export const HUD: React.FC<Props> = ({
               title="Đổi góc nhìn thứ 1 / thứ 3 (Phím [V] hoặc cuộn chuột)"
             >
               <span>{cameraMode === 'first' ? '👁️' : '🎥'}</span>
-              <span>{cameraMode === 'first' ? 'Góc nhìn 1' : 'Góc nhìn 3'}</span>
+              <span className="hidden sm:inline">{cameraMode === 'first' ? 'Góc nhìn 1' : 'Góc nhìn 3'}</span>
+              <span className="sm:hidden font-bold">{cameraMode === 'first' ? '1' : '3'}</span>
             </button>
           )}
 
           {/* Sound Toggle */}
           <button
             onClick={handleSoundToggle}
-            className="p-2 rounded-xl bg-black/60 hover:bg-black/80 border border-amber-800 text-amber-300 transition shadow cursor-pointer text-sm"
+            className="p-1 sm:p-2 rounded-lg sm:rounded-xl bg-black/60 hover:bg-black/80 border border-amber-800 text-amber-300 transition shadow cursor-pointer text-xs sm:text-sm"
             title={settings.soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
           >
             {settings.soundEnabled ? '🔊' : '🔇'}
