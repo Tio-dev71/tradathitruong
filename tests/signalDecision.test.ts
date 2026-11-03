@@ -30,7 +30,7 @@ describe('SignalDecisionService & 80/20 Logic', () => {
     const accepted = await signalDecisionService.requestSignal('p_100', 'Cao Thủ Đu Đỉnh');
     expect(accepted.allowed).toBe(true);
     expect(accepted.signal).toBeDefined();
-    expect(accepted.signal?.isDemo).toBe(true);
+    expect(accepted.signal?.isDemo).toBe(false);
 
     // Test 0% accept
     db.setConfig('acceptRate', '0.0');

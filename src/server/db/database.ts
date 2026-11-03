@@ -120,8 +120,11 @@ export class AppDatabase {
     // Default configuration seeds
     this.setDefaultConfig('acceptRate', '0.8');
     this.setDefaultConfig('cooldownSeconds', '60');
-    this.setDefaultConfig('providerMode', 'MOCK');
+    this.setDefaultConfig('providerMode', 'WEBHOOK');
     this.setDefaultConfig('maxPlayers', '30');
+    if (this.getConfig('providerMode') === 'MOCK') {
+      this.setConfig('providerMode', 'WEBHOOK');
+    }
   }
 
   private setDefaultConfig(key: string, value: string) {

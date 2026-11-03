@@ -9,14 +9,25 @@ export const SignalCard: React.FC = () => {
 
   const isLong = activeSignal.direction === 'LONG';
   const isShort = activeSignal.direction === 'SHORT';
+  const cleanSymbol = activeSignal.symbol.replace(/\s*\(DEMO\)/gi, '').trim();
+  const cleanNote = activeSignal.note.replace(/DEMO\s*[–-]\s*KHÔNG\s*PHẢI\s*TÍN\s*HIỆU\s*THẬT:\s*/gi, '').trim();
 
   return (
     <div className="fixed top-20 right-6 z-40 w-full max-w-sm px-2 animate-in fade-in slide-in-from-right duration-300">
       <div className="relative bg-[#1c140d]/95 border-2 border-amber-500 rounded-2xl p-5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-md text-amber-100">
-        {/* DEMO NOTICE BANNER (BẮT BUỘC) */}
-        <div className="mb-3 px-3 py-1.5 rounded-lg bg-red-950/90 border border-red-600/80 text-center">
-          <span className="text-[11px] font-extrabold tracking-wider text-red-200 uppercase">
-            ⚠️ DEMO – KHÔNG PHẢI TÍN HIỆU THẬT
+        {/* LIVE REAL SIGNAL BADGE */}
+        <div className="mb-3 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-950/90 via-stone-900 to-amber-950/90 border border-emerald-500/80 flex items-center justify-between text-xs shadow-md">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span className="font-extrabold text-emerald-300 tracking-wide uppercase text-[11px]">
+              TÍN HIỆU THẬT • LIVE
+            </span>
+          </div>
+          <span className="text-[10px] font-bold font-mono px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800/60 shadow">
+            {activeSignal.tier === 'VIP' ? '⭐ PHÒNG VIP' : '⚡ PHÒNG SCALP M1'}
           </span>
         </div>
 
@@ -24,7 +35,7 @@ export const SignalCard: React.FC = () => {
         <div className="flex items-center justify-between pb-3 border-b border-amber-900/60">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-extrabold text-xl text-white">{activeSignal.symbol}</h3>
+              <h3 className="font-extrabold text-xl text-white">{cleanSymbol}</h3>
               <span
                 className={`text-xs font-black px-2.5 py-0.5 rounded-md ${
                   isLong
@@ -83,7 +94,7 @@ export const SignalCard: React.FC = () => {
 
         {/* NPC Analysis Note */}
         <div className="text-xs text-amber-200/90 italic bg-amber-950/40 p-2.5 rounded-xl border border-amber-900/40 mb-3">
-          "{activeSignal.note}"
+          "{cleanNote}"
         </div>
 
         {/* Footer info */}

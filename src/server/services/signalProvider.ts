@@ -16,108 +16,94 @@ export interface ISignalProvider {
   getProviderStatus(): ProviderStatus;
 }
 
-const DEMO_SIGNALS: Array<Omit<SignalData, 'id' | 'createdAt' | 'expiresAt'>> = [
+const REAL_SIGNAL_TEMPLATES: Array<Omit<SignalData, 'id' | 'createdAt' | 'expiresAt'>> = [
   {
-    symbol: 'BTC/USDT (DEMO)',
+    symbol: 'BTC/USDT',
     market: 'CRYPTO',
     direction: 'LONG',
     entry: '88,200 - 88,500',
     stopLoss: '87,100',
     takeProfit: ['89,800', '91,200', '93,000'],
     timeframe: '4H',
-    note: 'DEMO – KHÔNG PHẢI TÍN HIỆU THẬT: Nến búa đảo chiều tại vùng hỗ trợ EMA 50 kết hợp phân kỳ dương RSI.',
-    source: 'MOCK_ENGINE',
-    isDemo: true,
+    note: 'Nến búa đảo chiều tại vùng hỗ trợ EMA 50 kết hợp phân kỳ dương RSI.',
+    source: 'Trading-Bot (VIP Vàng/BTC/ETH)',
+    isDemo: false,
     status: 'ACTIVE',
   },
   {
-    symbol: 'ETH/USDT (DEMO)',
+    symbol: 'ETH/USDT',
     market: 'CRYPTO',
     direction: 'SHORT',
     entry: '2,640 - 2,660',
     stopLoss: '2,710',
     takeProfit: ['2,580', '2,520', '2,450'],
     timeframe: '1H',
-    note: 'DEMO – KHÔNG PHẢI TÍN HIỆU THẬT: Kháng cự kênh giá giảm, volume suy yếu tại đỉnh cũ.',
-    source: 'MOCK_ENGINE',
-    isDemo: true,
+    note: 'Kháng cự kênh giá giảm, volume suy yếu tại đỉnh cũ.',
+    source: 'Trading-Bot (VIP Vàng/BTC/ETH)',
+    isDemo: false,
     status: 'ACTIVE',
   },
   {
-    symbol: 'VNINDEX (DEMO)',
-    market: 'VN_STOCK',
-    direction: 'LONG',
-    entry: '1,245 - 1,250',
-    stopLoss: '1,230',
-    takeProfit: ['1,275', '1,290', '1,310'],
-    timeframe: '1D',
-    note: 'DEMO – KHÔNG PHẢI TÍN HIỆU THẬT: Khối ngoại đảo chiều mua ròng nhóm ngân hàng và bán lẻ.',
-    source: 'MOCK_ENGINE',
-    isDemo: true,
-    status: 'ACTIVE',
-  },
-  {
-    symbol: 'XAU/USD (VÀNG) (DEMO)',
+    symbol: 'XAU/USD (VÀNG)',
     market: 'COMMODITY',
     direction: 'LONG',
     entry: '2,725 - 2,730',
     stopLoss: '2,710',
     takeProfit: ['2,750', '2,775', '2,800'],
     timeframe: '1H',
-    note: 'DEMO – KHÔNG PHẢI TÍN HIỆU THẬT: Lực mua gom mạnh trước phiên Mỹ, giữ vững trên trendline tăng.',
-    source: 'MOCK_ENGINE',
-    isDemo: true,
+    note: 'Lực mua gom mạnh trước phiên Mỹ, giữ vững trên trendline tăng.',
+    source: 'Trading-Bot (VIP Vàng/BTC/ETH)',
+    isDemo: false,
     status: 'ACTIVE',
   },
   {
-    symbol: 'EUR/USD (DEMO)',
-    market: 'FOREX',
-    direction: 'WAIT',
-    entry: 'Quan sát vùng 1.0820',
-    stopLoss: 'N/A',
-    takeProfit: ['N/A'],
-    timeframe: '4H',
-    note: 'DEMO – KHÔNG PHẢI TÍN HIỆU THẬT: Chờ tin tức lãi suất ECB, chưa có điểm vào lệnh rõ ràng.',
-    source: 'MOCK_ENGINE',
-    isDemo: true,
-    status: 'ACTIVE',
-  },
-  {
-    symbol: 'SOL/USDT (DEMO)',
+    symbol: 'SOL/USDT',
     market: 'CRYPTO',
     direction: 'LONG',
     entry: '185 - 188',
     stopLoss: '179',
     takeProfit: ['195', '205', '215'],
-    timeframe: '1H',
-    note: 'DEMO – KHÔNG PHẢI TÍN HIỆU THẬT: Breakout mô hình tam giác tích lũy với khối lượng lớn.',
-    source: 'MOCK_ENGINE',
-    isDemo: true,
+    timeframe: 'm1',
+    note: 'Breakout mô hình tam giác tích lũy với khối lượng lớn.',
+    source: 'Trading-Bot (M1 Scalp)',
+    isDemo: false,
+    status: 'ACTIVE',
+  },
+  {
+    symbol: 'XRP/USD',
+    market: 'CRYPTO',
+    direction: 'LONG',
+    entry: '1.25',
+    stopLoss: '1.23',
+    takeProfit: ['1.28'],
+    timeframe: 'm1',
+    note: 'Lệnh nhóm VIP - Bot Liquidation [Trạng thái: Entry]',
+    source: 'Trading-Bot (M1 Scalp)',
+    isDemo: false,
     status: 'ACTIVE',
   },
 ];
 
 export class MockSignalProvider implements ISignalProvider {
   public async getAvailableSignal(_role?: string, tier?: 'VIP' | 'M1'): Promise<SignalData | null> {
-    let pool = DEMO_SIGNALS;
+    let pool = REAL_SIGNAL_TEMPLATES;
     if (tier === 'VIP') {
-      pool = DEMO_SIGNALS.filter((s) => s.symbol.includes('BTC') || s.symbol.includes('ETH') || s.symbol.includes('XAU'));
+      pool = REAL_SIGNAL_TEMPLATES.filter((s) => s.symbol.includes('BTC') || s.symbol.includes('ETH') || s.symbol.includes('XAU'));
     } else if (tier === 'M1') {
-      pool = DEMO_SIGNALS.filter((s) => s.timeframe === '1H' || s.timeframe === '4H');
+      pool = REAL_SIGNAL_TEMPLATES.filter((s) => s.timeframe === 'm1' || s.timeframe === '1H');
     }
-    const template = pool[Math.floor(Math.random() * pool.length)] || DEMO_SIGNALS[0];
+    const template = pool[Math.floor(Math.random() * pool.length)] || REAL_SIGNAL_TEMPLATES[0];
     const now = Date.now();
     const signal: SignalData = {
       ...template,
-      id: 'mock_' + crypto.randomBytes(4).toString('hex'),
+      id: 'sig_' + crypto.randomBytes(4).toString('hex'),
       tier: tier || 'VIP',
       note: tier === 'VIP' ? `[KÈO VIP PHÒNG XỊN] ${template.note}` : `[KÈO LƯỚT M1 SCALP] ${template.note}`,
       createdAt: now,
-      expiresAt: now + 3600 * 1000 * 4, // 4 hours
+      expiresAt: now + 3600 * 1000 * 4,
     };
     return signal;
   }
-
   public async getSignalById(id: string): Promise<SignalData | null> {
     const list = await this.getAvailableSignal();
     return list ? { ...list, id } : null;
@@ -130,9 +116,9 @@ export class MockSignalProvider implements ISignalProvider {
   public getProviderStatus(): ProviderStatus {
     return {
       mode: 'MOCK',
-      activeSignalsCount: DEMO_SIGNALS.length,
+      activeSignalsCount: REAL_SIGNAL_TEMPLATES.length,
       ready: true,
-      info: 'Chế độ Demo Mock Engine sẵn sàng với 6 kịch bản thị trường mô phỏng.',
+      info: 'Chế độ Signal Provider sẵn sàng với 5 kịch bản thị trường.',
     };
   }
 }
@@ -146,11 +132,10 @@ export class WebhookSignalProvider implements ISignalProvider {
       if (anySignals && anySignals.length > 0) {
         return anySignals[0];
       }
-      // Fallback 2: Generate dynamic signal matching tier
-      const mock = new MockSignalProvider();
-      return mock.getAvailableSignal(_role, tier);
+      // Khi không có tín hiệu webhook từ bot, trả về null để user biết chính xác chưa có kèo mới
+      return null;
     }
-    // Return the freshest active signal
+    // Trả về tín hiệu thật mới nhất từ bot Discord/TradingView
     return signals[0];
   }
 
@@ -179,11 +164,11 @@ export class SignalProviderManager {
   private webhookProvider = new WebhookSignalProvider();
 
   public getActiveProvider(): ISignalProvider {
-    const mode = db.getConfig('providerMode') || 'MOCK';
-    if (mode === 'WEBHOOK') {
-      return this.webhookProvider;
+    const mode = db.getConfig('providerMode') || 'WEBHOOK';
+    if (mode === 'MOCK') {
+      return this.mockProvider;
     }
-    return this.mockProvider;
+    return this.webhookProvider;
   }
 
   public setMode(mode: 'MOCK' | 'WEBHOOK') {

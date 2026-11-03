@@ -107,7 +107,7 @@ export class SignalDecisionService {
 
     if (!signal) {
       // Bà đồng ý nhưng provider không có tín hiệu (ví dụ Webhook rỗng)
-      npcQuote = 'Cô soi rồi mà chưa thấy kèo nào rõ cả, giữ vốn cũng là một kèo đấy cháu!';
+      npcQuote = 'Cô mở sổ tay rồi mà hiện tại các phòng TradingView chưa có kèo mới! Bot đang canh thị trường, khi nào có điểm vào lệnh đẹp cô sẽ báo ngay! Cháu uống chén trà ngồi hóng chút nhé!';
       db.logSignalRequest(playerId, role, true, npcQuote, undefined);
       return {
         allowed: true,
@@ -180,7 +180,7 @@ export class SignalDecisionService {
       : `Bát mở... Chẵn! Quẻ chỉ thấy sóng ngắn phòng M1 Scalp [${signal?.symbol || 'THỊ TRƯỜNG'}], lướt nhanh kẻo đứt tay nha con! Uống thêm trà đá tích phước để mở quẻ VIP!`;
 
     if (!signal) {
-      const emptyQuote = 'Thầy mở bát ra mà quẻ biến ảo quá chưa thấy nến rõ ràng, giữ tiền cũng là có lộc đấy con!';
+      const emptyQuote = 'Thầy mở bát ra mà hiện tại các phòng TradingView chưa có tín hiệu mới, quẻ biến ảo quá chưa thấy nến rõ ràng, giữ tiền cũng là có lộc đấy con!';
       db.logSignalRequest(playerId, role, true, `[Thầy Đồ] ${emptyQuote}`);
       return {
         allowed: true,
