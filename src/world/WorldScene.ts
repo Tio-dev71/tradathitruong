@@ -311,8 +311,13 @@ export class WorldScene {
     this.renderer.setSize(width, height);
   };
 
-  public updateGoldPrice(price: number, change?: number, changePercent?: number) {
-    this.stallBuilder.goldBillboard?.updatePrice(price, change, changePercent);
+  public updateGoldPrice(
+    price: number,
+    change?: number,
+    changePercent?: number,
+    candles?: { o: number; h: number; l: number; c: number }[]
+  ) {
+    this.stallBuilder.goldBillboard?.updatePrice(price, change, changePercent, candles);
   }
 
   public dispose() {

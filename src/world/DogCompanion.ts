@@ -198,6 +198,7 @@ export class DogCompanion {
 
   // Trigger dog barking
   public bark() {
+    if (this.isBarking) return;
     this.isBarking = true;
     this.barkTimer = 3.5;
     this.bubbleTimer = 3.5;
@@ -258,3 +259,4 @@ export class DogCompanion {
     return this.group.position;
   }
 }
+

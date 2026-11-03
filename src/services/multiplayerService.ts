@@ -24,7 +24,12 @@ export interface MultiplayerCallbacks {
   onOnlineCount: (count: number) => void;
   onErrorJoin: (data: { message: string }) => void;
   onCreditsUpdate?: (data: { credits: number; teaCount: number; cost: number; action: string; message: string }) => void;
-  onGoldUpdate?: (data: { price: number; change?: number; changePercent?: number }) => void;
+  onGoldUpdate?: (data: {
+    price: number;
+    change?: number;
+    changePercent?: number;
+    candles?: { o: number; h: number; l: number; c: number }[];
+  }) => void;
   onMarketTickers?: (tickers: Record<string, any>) => void;
 }
 

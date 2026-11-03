@@ -14,16 +14,18 @@ export class MarketPriceService {
   private io: SocketIOServer | null = null;
   private pollInterval: NodeJS.Timeout | null = null;
   private lastPrices = new Map<string, TickerData>();
+  private goldCandles: { o: number; h: number; l: number; c: number }[] = [];
+  private lastKlinesFetchTime = 0;
 
   constructor() {
-    // Seed initial sensible fallback data
+    // Seed initial sensible fallback data (Gold spot price ~$3,960)
     this.lastPrices.set('XAU/USD', {
       symbol: 'XAU/USD',
-      price: 2748.50,
-      change: 18.60,
-      changePercent: 0.68,
-      high: 2756.20,
-      low: 2729.40,
+      price: 3960.50,
+      change: 39.90,
+      changePercent: 1.02,
+      high: 3973.80,
+      low: 3900.80,
       updatedAt: Date.now(),
     });
     this.lastPrices.set('BTC/USDT', {
@@ -139,6 +141,13 @@ export class MarketPriceService {
         }
       });
 
+      // Periodically fetch real 1H klines for gold (every ~30s)
+      const now = Date.now();
+      if (now - this.lastKlinesFetchTime > 30000 || this.goldCandles.length === 0) {
+        this.lastKlinesFetchTime = now;
+        this.fetchGoldKlines().catch(() => {});
+      }
+
       // Broadcast full ticker packet to 3D world
       if (this.io) {
         this.io.emit('market:tickers', this.getAllTickers());
@@ -150,6 +159,26 @@ export class MarketPriceService {
       const nextP = Number((currentGold.price + microTick).toFixed(2));
       const nextC = Number((currentGold.change + microTick).toFixed(2));
       this.updatePrice('XAU/USD', nextP, nextC, currentGold.changePercent);
+    }
+  }
+
+  private async fetchGoldKlines() {
+    try {
+      const res = await fetch('https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=24', {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (!res.ok) return;
+      const raw: any = await res.json();
+      if (!Array.isArray(raw)) return;
+      this.goldCandles = raw.map((k: any) => ({
+        o: parseFloat(k[1]),
+        h: parseFloat(k[2]),
+        l: parseFloat(k[3]),
+        c: parseFloat(k[4]),
+      }));
+    } catch {
+      // ignore
     }
   }
 
@@ -182,6 +211,7 @@ export class MarketPriceService {
         changePercent: updated.changePercent,
         high: updated.high,
         low: updated.low,
+        candles: this.goldCandles,
       });
     }
   }

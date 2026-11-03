@@ -286,8 +286,6 @@ export function App() {
     soundEngine.startAmbience((streetText) => {
       if (streetText.includes('🐕') && world) {
         world.dog.bark();
-      } else if (streetText.includes('🗣️') && world) {
-        world.streetDrama.triggerDrama();
       }
       addChatMessage({
         id: 'street_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
@@ -323,7 +321,7 @@ export function App() {
           }, 4500);
         },
         onGoldUpdate: (data) => {
-          world.updateGoldPrice(data.price, data.change, data.changePercent);
+          world.updateGoldPrice(data.price, data.change, data.changePercent, data.candles);
         },
         onMarketTickers: (tickers) => {
           setMarketTickers(tickers);

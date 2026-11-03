@@ -20,6 +20,8 @@ class SoundEngine {
   private footstepSource: AudioBufferSourceNode | null = null;
   private footstepGain: GainNode | null = null;
   private isFootstepPlaying: boolean = false;
+  private lastDogBarkTime: number = 0;
+  private lastBanterTime: number = 0;
 
   private initContext() {
     if (!this.ctx) {
@@ -493,7 +495,7 @@ class SoundEngine {
     }
   }
 
-  // Funny Vietnamese Street Banter Callouts (Tiếng chửi / quát nhau vui tai)
+  // Funny Vietnamese Street Banter Callouts (Uses Edge Neural TTS)
   public playStreetBanter(): string {
     const BANTER_PHRASES = [
       'Này này, có dắt cái xe máy gọn vào vỉa hè không thì bảo?!',
@@ -502,23 +504,13 @@ class SoundEngine {
       'Đua xe à thằng ôn con kia, vỉa hè chứ có phải đường đua F1 đâu!',
       'Thôi thôi các bác bớt mồm đi, ngồi xuống làm chén trà đá cho hạ hỏa!',
       'Bát này Chẵn nhé các bác! Ai Lẻ thì bước sang một bên kẻo mất tiền!',
-      'Gâu gâu! (Tiếng chó mực bên hiên nhà sủa theo)',
     ];
 
     const phrase = BANTER_PHRASES[Math.floor(Math.random() * BANTER_PHRASES.length)];
 
-    // If browser supports SpeechSynthesis, speak it in Vietnamese
-    if ('speechSynthesis' in window && !this.isMuted) {
-      try {
-        const u = new SpeechSynthesisUtterance(phrase);
-        u.lang = 'vi-VN';
-        u.rate = 1.15;
-        u.pitch = 1.1;
-        u.volume = 0.45;
-        window.speechSynthesis.speak(u);
-      } catch {
-        // speech synthesis fallback
-      }
+    // Play using Microsoft Edge Vietnamese Neural Voice (NamMinh)
+    if (!this.isMuted) {
+      this.playNpcVoice(phrase, 'namminh');
     }
 
     return phrase;
@@ -560,24 +552,32 @@ class SoundEngine {
     this.isAmbientRunning = true;
     this.initContext();
 
-    // Periodically play gentle sparrow chirps and occasional street banter / dog bark
+    // Gentle ambient countryside loop with significantly reduced dog & banter frequencies
     const loop = () => {
       if (!this.isAmbientRunning) return;
 
+      const now = Date.now();
       const rand = Math.random();
-      if (rand < 0.6) {
-        this.playBirdChirp();
-      } else if (rand < 0.8) {
+
+      // Rare dog bark: only if at least 120s passed since last bark
+      if (rand < 0.18 && now - this.lastDogBarkTime > 120000) {
+        this.lastDogBarkTime = now;
         this.playDogBark();
         onStreetEvent?.('🐕 Chó Mực: Gâu! Gâu gâu!');
-      } else if (rand < 0.92) {
-        this.playCarHorn();
-      } else {
+      } else if (rand < 0.28 && now - this.lastBanterTime > 180000) {
+        // Rare street banter: only if at least 180s passed since last banter
+        this.lastBanterTime = now;
         const shout = this.playStreetBanter();
         onStreetEvent?.(`🗣️ Phố Xá: "${shout}"`);
+      } else if (rand < 0.45) {
+        this.playCarHorn();
+      } else {
+        // Most common: peaceful sparrows & breeze
+        this.playBirdChirp();
       }
 
-      const nextDelay = 3500 + Math.random() * 5000;
+      // Much calmer ambient tick interval: 12 - 28 seconds
+      const nextDelay = 12000 + Math.random() * 16000;
       this.ambientTimer = window.setTimeout(loop, nextDelay);
     };
 

@@ -29,16 +29,16 @@ export class GoldBillboardSystem {
     this.canvas.height = 512;
     this.ctx = this.canvas.getContext('2d')!;
 
-    // Initial realistic Gold price
-    const basePrice = 2748.50;
+    // Initial realistic Gold spot price (~$3,960)
+    const basePrice = 3960.50;
     this.targetPrice = basePrice;
     this.data = {
       symbol: 'XAU/USD',
       price: basePrice,
-      change: 18.60,
-      changePercent: 0.68,
-      high: 2756.20,
-      low: 2729.40,
+      change: 39.90,
+      changePercent: 1.02,
+      high: 3973.80,
+      low: 3900.80,
       bid: basePrice - 0.30,
       ask: basePrice + 0.30,
       candles: this.generateInitialCandles(basePrice),
@@ -47,10 +47,9 @@ export class GoldBillboardSystem {
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.minFilter = THREE.LinearFilter;
     this.texture.magFilter = THREE.LinearFilter;
-    // Flip U so text renders correctly when plane faces -Z towards the street
-    this.texture.wrapS = THREE.RepeatWrapping;
-    this.texture.repeat.x = -1;
-    this.texture.offset.x = 1;
+    // Standard unmirrored texture coordinates
+    this.texture.wrapS = THREE.ClampToEdgeWrapping;
+    this.texture.wrapT = THREE.ClampToEdgeWrapping;
 
     this.buildBillboardMesh();
     this.renderCanvas();
@@ -58,16 +57,20 @@ export class GoldBillboardSystem {
 
   private generateInitialCandles(base: number) {
     const list: { o: number; h: number; l: number; c: number }[] = [];
-    let cur = base - 14;
+    let cur = base - 25;
     for (let i = 0; i < 28; i++) {
-      const delta = (Math.random() - 0.48) * 3.5;
-      const o = cur;
-      const c = cur + delta;
-      const h = Math.max(o, c) + Math.random() * 2.2;
-      const l = Math.min(o, c) - Math.random() * 2.2;
+      const delta = Math.sin((i / 28) * Math.PI * 2) * 2.5 + (Math.random() - 0.48) * 3.8;
+      const o = Number(cur.toFixed(2));
+      const c = Number((cur + delta).toFixed(2));
+      const h = Number((Math.max(o, c) + Math.random() * 2.5 + 0.8).toFixed(2));
+      const l = Number((Math.min(o, c) - Math.random() * 2.5 - 0.8).toFixed(2));
       list.push({ o, h, l, c });
       cur = c;
     }
+    // Seamless connection with base price at latest candle
+    list[list.length - 1].c = base;
+    list[list.length - 1].h = Math.max(list[list.length - 1].h, base);
+    list[list.length - 1].l = Math.min(list[list.length - 1].l, base);
     return list;
   }
 
@@ -75,15 +78,14 @@ export class GoldBillboardSystem {
     const width = 6.2;
     const height = 3.4;
 
-    // LED Screen plane facing outwards (-Z) towards the street
-    const screenGeo = new THREE.PlaneGeometry(width, height);
+    // LED Screen using BoxGeometry facing outwards (-Z) towards the street
+    // Front face (-Z) naturally renders texture unmirrored from left to right
+    const screenGeo = new THREE.BoxGeometry(width, height, 0.04);
     const screenMat = new THREE.MeshBasicMaterial({
       map: this.texture,
-      side: THREE.DoubleSide,
       toneMapped: false,
     });
     const screen = new THREE.Mesh(screenGeo, screenMat);
-    screen.rotation.y = Math.PI; // Face outwards to the street
     screen.position.set(0, 0, -0.06);
     this.mesh.add(screen);
 
@@ -116,7 +118,12 @@ export class GoldBillboardSystem {
     this.mesh.add(boardGlow);
   }
 
-  public updatePrice(newPrice: number, change?: number, changePercent?: number) {
+  public updatePrice(
+    newPrice: number,
+    change?: number,
+    changePercent?: number,
+    candles?: { o: number; h: number; l: number; c: number }[]
+  ) {
     this.data.price = newPrice;
     if (change !== undefined) this.data.change = change;
     if (changePercent !== undefined) this.data.changePercent = changePercent;
@@ -125,12 +132,22 @@ export class GoldBillboardSystem {
     this.data.high = Math.max(this.data.high, newPrice);
     this.data.low = Math.min(this.data.low, newPrice);
 
-    // Update last candle
-    if (this.data.candles.length > 0) {
-      const last = this.data.candles[this.data.candles.length - 1];
-      last.c = newPrice;
-      last.h = Math.max(last.h, newPrice);
-      last.l = Math.min(last.l, newPrice);
+    if (candles && candles.length > 0) {
+      this.data.candles = [...candles];
+    } else {
+      // Check if price deviates drastically from current candles to prevent cliff drop
+      if (this.data.candles.length === 0) {
+        this.data.candles = this.generateInitialCandles(newPrice);
+      } else {
+        const last = this.data.candles[this.data.candles.length - 1];
+        if (Math.abs(newPrice - last.c) > newPrice * 0.05) {
+          this.data.candles = this.generateInitialCandles(newPrice);
+        } else {
+          last.c = newPrice;
+          last.h = Math.max(last.h, newPrice);
+          last.l = Math.min(last.l, newPrice);
+        }
+      }
     }
 
     this.renderCanvas();
@@ -143,7 +160,7 @@ export class GoldBillboardSystem {
       const tick = (Math.random() - 0.49) * 0.8;
       const nextPrice = Number((this.data.price + tick).toFixed(2));
       const nextChange = Number((this.data.change + tick).toFixed(2));
-      const nextPct = Number(((nextChange / 2730) * 100).toFixed(2));
+      const nextPct = Number(((nextChange / Math.max(1, this.data.price)) * 100).toFixed(2));
 
       this.updatePrice(nextPrice, nextChange, nextPct);
 
@@ -153,9 +170,9 @@ export class GoldBillboardSystem {
         this.data.candles.shift();
         this.data.candles.push({
           o: lastC,
-          h: lastC + Math.random() * 1.5,
-          l: lastC - Math.random() * 1.5,
-          c: lastC + (Math.random() - 0.48) * 1.8,
+          h: Number((lastC + Math.random() * 1.5).toFixed(2)),
+          l: Number((lastC - Math.random() * 1.5).toFixed(2)),
+          c: Number((lastC + (Math.random() - 0.48) * 1.8).toFixed(2)),
         });
       }
     }
@@ -282,6 +299,9 @@ export class GoldBillboardSystem {
         if (c.l < minVal) minVal = c.l;
         if (c.h > maxVal) maxVal = c.h;
       });
+      const pad = Math.max(6, (maxVal - minVal) * 0.12);
+      minVal -= pad;
+      maxVal += pad;
       const range = Math.max(2, maxVal - minVal);
       const slotW = chartW / candles.length;
       const candleW = Math.max(4, slotW * 0.65);

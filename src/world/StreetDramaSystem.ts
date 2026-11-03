@@ -2,10 +2,13 @@ import * as THREE from 'three';
 import { soundEngine } from '../services/soundEngine';
 
 export interface DramaSpot {
-  posA: THREE.Vector3;
-  posB: THREE.Vector3;
-  lookAtA: THREE.Vector3;
-  lookAtB: THREE.Vector3;
+  startA: THREE.Vector3;
+  meetA: THREE.Vector3;
+  exitA: THREE.Vector3;
+
+  startB: THREE.Vector3;
+  meetB: THREE.Vector3;
+  exitB: THREE.Vector3;
 }
 
 export class StreetDramaSystem {
@@ -18,6 +21,8 @@ export class StreetDramaSystem {
   private bodyA!: THREE.Mesh;
   private leftArmA = new THREE.Group();
   private rightArmA = new THREE.Group();
+  private leftLegA = new THREE.Group();
+  private rightLegA = new THREE.Group();
   private bubbleA!: THREE.Sprite;
 
   // Character B: Chiến Thần Bắt Đáy (Áo vàng)
@@ -26,43 +31,49 @@ export class StreetDramaSystem {
   private bodyB!: THREE.Mesh;
   private leftArmB = new THREE.Group();
   private rightArmB = new THREE.Group();
+  private leftLegB = new THREE.Group();
+  private rightLegB = new THREE.Group();
   private bubbleB!: THREE.Sprite;
 
-  // State
-  private status: 'hidden' | 'arguing' | 'cooling_down' = 'hidden';
+  // State Machine: hidden -> walking_in -> arguing -> walking_out -> hidden
+  private status: 'hidden' | 'walking_in' | 'arguing' | 'walking_out' = 'hidden';
   private timer = 0;
-  private nextEventCountdown = 25 + Math.random() * 20; // First event triggers after ~25-45s
+  // Reduced frequency: first event after ~80-120s, subsequent events every 3-5 minutes (180-300s)
+  private nextEventCountdown = 85 + Math.random() * 35;
   private onChatCallback?: (text: string) => void;
+  private currentSpot!: DramaSpot;
 
-  // Potential drama spots along the street and sidewalks
+  // 3 Scenic Street spots for characters to walk in, meet, argue, and walk out
   private spots: DramaSpot[] = [
     // Spot 0: Vỉa hè đối diện quán trà (ngã tư vạch kẻ đường)
     {
-      posA: new THREE.Vector3(-1.8, 0, 5.0),
-      posB: new THREE.Vector3(-0.6, 0, 5.0),
-      lookAtA: new THREE.Vector3(-0.6, 0, 5.0),
-      lookAtB: new THREE.Vector3(-1.8, 0, 5.0),
+      startA: new THREE.Vector3(-5.5, 0, 5.0),
+      meetA: new THREE.Vector3(-1.6, 0, 5.0),
+      exitA: new THREE.Vector3(-7.5, 0, 5.0),
+
+      startB: new THREE.Vector3(3.2, 0, 5.0),
+      meetB: new THREE.Vector3(-0.5, 0, 5.0),
+      exitB: new THREE.Vector3(5.0, 0, 5.0),
     },
     // Spot 1: Vỉa hè góc phố cạnh Tiệm Vàng DJN
     {
-      posA: new THREE.Vector3(6.5, 0, -3.2),
-      posB: new THREE.Vector3(7.5, 0, -3.2),
-      lookAtA: new THREE.Vector3(7.5, 0, -3.2),
-      lookAtB: new THREE.Vector3(6.5, 0, -3.2),
+      startA: new THREE.Vector3(3.0, 0, -3.2),
+      meetA: new THREE.Vector3(6.2, 0, -3.2),
+      exitA: new THREE.Vector3(1.5, 0, -3.2),
+
+      startB: new THREE.Vector3(10.5, 0, -3.2),
+      meetB: new THREE.Vector3(7.4, 0, -3.2),
+      exitB: new THREE.Vector3(12.0, 0, -3.2),
     },
     // Spot 2: Gần cổng chào làng bên lề đường
     {
-      posA: new THREE.Vector3(-7.2, 0, 3.8),
-      posB: new THREE.Vector3(-6.0, 0, 3.8),
-      lookAtA: new THREE.Vector3(-6.0, 0, 3.8),
-      lookAtB: new THREE.Vector3(-7.2, 0, 3.8),
-    },
-    // Spot 3: Góc cột điện đèn đường qua phố
-    {
-      posA: new THREE.Vector3(2.2, 0, 4.2),
-      posB: new THREE.Vector3(3.2, 0, 4.2),
-      lookAtA: new THREE.Vector3(3.2, 0, 4.2),
-      lookAtB: new THREE.Vector3(2.2, 0, 4.2),
+      startA: new THREE.Vector3(-10.5, 0, 3.8),
+      meetA: new THREE.Vector3(-7.2, 0, 3.8),
+      exitA: new THREE.Vector3(-12.5, 0, 3.8),
+
+      startB: new THREE.Vector3(-3.0, 0, 3.8),
+      meetB: new THREE.Vector3(-5.9, 0, 3.8),
+      exitB: new THREE.Vector3(-1.5, 0, 3.8),
     },
   ];
 
@@ -131,34 +142,37 @@ export class StreetDramaSystem {
 
     this.charA.add(this.headA);
 
-    // Left Arm (Points finger forward)
-    this.leftArmA.position.set(0.3, 0.78, 0);
+    // Arms with shoulder joints
     const armGeom = new THREE.CylinderGeometry(0.065, 0.065, 0.38, 6);
     armGeom.translate(0, -0.19, 0);
+
+    this.leftArmA.position.set(0.3, 0.78, 0);
     const armL = new THREE.Mesh(armGeom, shirtMat);
     armL.castShadow = true;
     this.leftArmA.add(armL);
     this.charA.add(this.leftArmA);
 
-    // Right Arm
     this.rightArmA.position.set(-0.3, 0.78, 0);
     const armR = new THREE.Mesh(armGeom, shirtMat);
     armR.castShadow = true;
     this.rightArmA.add(armR);
     this.charA.add(this.rightArmA);
 
-    // Legs
+    // Legs with hip joints
     const legGeom = new THREE.CylinderGeometry(0.08, 0.075, 0.42, 6);
     legGeom.translate(0, -0.21, 0);
-    const legL = new THREE.Mesh(legGeom, pantsMat);
-    legL.position.set(0.12, 0.42, 0);
-    legL.castShadow = true;
-    this.charA.add(legL);
 
-    const legR = new THREE.Mesh(legGeom, pantsMat);
-    legR.position.set(-0.12, 0.42, 0);
-    legR.castShadow = true;
-    this.charA.add(legR);
+    this.leftLegA.position.set(0.12, 0.42, 0);
+    const legMeshL = new THREE.Mesh(legGeom, pantsMat);
+    legMeshL.castShadow = true;
+    this.leftLegA.add(legMeshL);
+    this.charA.add(this.leftLegA);
+
+    this.rightLegA.position.set(-0.12, 0.42, 0);
+    const legMeshR = new THREE.Mesh(legGeom, pantsMat);
+    legMeshR.castShadow = true;
+    this.rightLegA.add(legMeshR);
+    this.charA.add(this.rightLegA);
 
     // Speech Bubble Sprite
     this.bubbleA = new THREE.Sprite(
@@ -169,6 +183,7 @@ export class StreetDramaSystem {
     );
     this.bubbleA.scale.set(3.2, 1.4, 1);
     this.bubbleA.position.set(0, 1.85, 0);
+    this.bubbleA.visible = false;
     this.charA.add(this.bubbleA);
   }
 
@@ -216,6 +231,7 @@ export class StreetDramaSystem {
     // Arms
     const armGeom = new THREE.CylinderGeometry(0.065, 0.065, 0.38, 6);
     armGeom.translate(0, -0.19, 0);
+
     this.leftArmB.position.set(0.3, 0.78, 0);
     const armL = new THREE.Mesh(armGeom, shirtMat);
     armL.castShadow = true;
@@ -231,15 +247,18 @@ export class StreetDramaSystem {
     // Legs
     const legGeom = new THREE.CylinderGeometry(0.08, 0.075, 0.42, 6);
     legGeom.translate(0, -0.21, 0);
-    const legL = new THREE.Mesh(legGeom, pantsMat);
-    legL.position.set(0.12, 0.42, 0);
-    legL.castShadow = true;
-    this.charB.add(legL);
 
-    const legR = new THREE.Mesh(legGeom, pantsMat);
-    legR.position.set(-0.12, 0.42, 0);
-    legR.castShadow = true;
-    this.charB.add(legR);
+    this.leftLegB.position.set(0.12, 0.42, 0);
+    const legMeshL = new THREE.Mesh(legGeom, pantsMat);
+    legMeshL.castShadow = true;
+    this.leftLegB.add(legMeshL);
+    this.charB.add(this.leftLegB);
+
+    this.rightLegB.position.set(-0.12, 0.42, 0);
+    const legMeshR = new THREE.Mesh(legGeom, pantsMat);
+    legMeshR.castShadow = true;
+    this.rightLegB.add(legMeshR);
+    this.charB.add(this.rightLegB);
 
     // Speech Bubble Sprite
     this.bubbleB = new THREE.Sprite(
@@ -250,6 +269,7 @@ export class StreetDramaSystem {
     );
     this.bubbleB.scale.set(3.2, 1.4, 1);
     this.bubbleB.position.set(0, 1.85, 0);
+    this.bubbleB.visible = false;
     this.charB.add(this.bubbleB);
   }
 
@@ -311,50 +331,124 @@ export class StreetDramaSystem {
     bubble.visible = true;
   }
 
-  // Trigger a dramatic Vietnamese street argument
-  public async triggerDrama(): Promise<void> {
+  // Trigger: Characters spawn at start positions and walk in
+  public triggerDrama(): void {
     if (this.status !== 'hidden') return;
 
-    // 1. Pick a random drama spot
-    const spot = this.spots[Math.floor(Math.random() * this.spots.length)];
-    this.charA.position.copy(spot.posA);
-    this.charB.position.copy(spot.posB);
-    this.charA.lookAt(spot.lookAtA);
-    this.charB.lookAt(spot.lookAtB);
+    this.currentSpot = this.spots[Math.floor(Math.random() * this.spots.length)];
+
+    // Place them at the outer start positions
+    this.charA.position.copy(this.currentSpot.startA);
+    this.charB.position.copy(this.currentSpot.startB);
+
+    // Look towards the meeting confrontation point
+    this.charA.lookAt(this.currentSpot.meetA);
+    this.charB.lookAt(this.currentSpot.meetB);
+
+    this.bubbleA.visible = false;
+    this.bubbleB.visible = false;
 
     this.root.visible = true;
+    this.status = 'walking_in';
+  }
+
+  // Start the argument once both characters meet
+  private async startArguing() {
     this.status = 'arguing';
 
-    // 2. Play audio chuinhau1.mp3 or chuinhau2.mp3
-    const arg = await soundEngine.playStreetArgument();
-    this.timer = arg.duration + 2.0;
+    // Face each other directly
+    this.charA.lookAt(this.charB.position);
+    this.charB.lookAt(this.charA.position);
 
-    // 3. Update speech bubbles
+    // Play actual audio chuinhau1.mp3 or chuinhau2.mp3
+    const arg = await soundEngine.playStreetArgument();
+    this.timer = arg.duration + 2.5;
+
+    // Show speech bubbles
     this.updateBubble(this.bubbleA, arg.textA, '#d90429');
     this.updateBubble(this.bubbleB, arg.textB, '#e76f51');
 
-    // 4. Notify in chat
     if (this.onChatCallback) {
       this.onChatCallback(`🗣️ Cãi vã đường phố: "${arg.summary}"`);
     }
   }
 
+  // Finish arguing: Turn around and walk away
+  private startWalkingOut() {
+    this.status = 'walking_out';
+    this.timer = 5.0; // 5 seconds to walk away
+
+    // Show parting insult bubbles briefly
+    this.updateBubble(this.bubbleA, 'Hừ! Nhớ mặt tao đấy!', '#4b5563');
+    this.updateBubble(this.bubbleB, 'Biến đi cho rảnh nợ!', '#4b5563');
+
+    // Turn towards exit directions
+    this.charA.lookAt(this.currentSpot.exitA);
+    this.charB.lookAt(this.currentSpot.exitB);
+
+    setTimeout(() => {
+      this.bubbleA.visible = false;
+      this.bubbleB.visible = false;
+    }, 2000);
+  }
+
   public update(delta: number, timeSec: number) {
-    // Automatic recurring trigger loop
+    // 1. Idle & countdown between occurrences (calm, rare interval: 3 to 5 minutes)
     if (this.status === 'hidden') {
       this.nextEventCountdown -= delta;
       if (this.nextEventCountdown <= 0) {
-        this.nextEventCountdown = 45 + Math.random() * 35; // Next event in 45-80s
+        this.nextEventCountdown = 180 + Math.random() * 120; // Next in 180-300s
         this.triggerDrama();
       }
       return;
     }
 
-    this.timer -= delta;
+    const walkSpeed = 1.6; // Walking speed (m/s)
 
+    // 2. WALKING IN: Moving towards meet points
+    if (this.status === 'walking_in') {
+      const distA = this.charA.position.distanceTo(this.currentSpot.meetA);
+      const distB = this.charB.position.distanceTo(this.currentSpot.meetB);
+
+      if (distA > 0.12) {
+        const dirA = new THREE.Vector3().subVectors(this.currentSpot.meetA, this.charA.position).normalize();
+        this.charA.position.addScaledVector(dirA, Math.min(distA, walkSpeed * delta));
+        this.charA.lookAt(this.currentSpot.meetA);
+      }
+      if (distB > 0.12) {
+        const dirB = new THREE.Vector3().subVectors(this.currentSpot.meetB, this.charB.position).normalize();
+        this.charB.position.addScaledVector(dirB, Math.min(distB, walkSpeed * delta));
+        this.charB.lookAt(this.currentSpot.meetB);
+      }
+
+      // Walking limb swing animation
+      const swing = Math.sin(timeSec * 8) * 0.55;
+      this.leftLegA.rotation.x = swing;
+      this.rightLegA.rotation.x = -swing;
+      this.leftArmA.rotation.x = -swing * 0.6;
+      this.rightArmA.rotation.x = swing * 0.6;
+
+      this.leftLegB.rotation.x = -swing;
+      this.rightLegB.rotation.x = swing;
+      this.leftArmB.rotation.x = swing * 0.6;
+      this.rightArmB.rotation.x = -swing * 0.6;
+
+      // Both reached meeting point -> Begin arguing
+      if (distA <= 0.12 && distB <= 0.12) {
+        this.leftLegA.rotation.x = 0;
+        this.rightLegA.rotation.x = 0;
+        this.leftLegB.rotation.x = 0;
+        this.rightLegB.rotation.x = 0;
+        this.startArguing();
+      }
+      return;
+    }
+
+    // 3. ARGUING: Intensive gesturing in place
     if (this.status === 'arguing') {
-      // High-energy aggressive arguing gestures:
-      // Character A points finger and leans in
+      this.timer -= delta;
+
+      // Character A points finger aggressively forward, shaking with anger, head bobbing
       this.leftArmA.rotation.x = -Math.PI / 2 + Math.sin(timeSec * 14) * 0.25;
       this.leftArmA.rotation.z = Math.sin(timeSec * 10) * 0.15;
       this.rightArmA.rotation.x = -0.3 + Math.cos(timeSec * 12) * 0.2;
@@ -362,7 +456,7 @@ export class StreetDramaSystem {
       this.headA.rotation.z = Math.sin(timeSec * 10) * 0.08;
       this.charA.position.y = Math.abs(Math.sin(timeSec * 10)) * 0.05;
 
-      // Character B puffs chest, gestures defensively with fists, shakes head left/right
+      // Character B puffs chest, gestures defensively with fists, shakes head
       this.leftArmB.rotation.z = 0.7 + Math.sin(timeSec * 12) * 0.2;
       this.leftArmB.rotation.x = -0.4;
       this.rightArmB.rotation.z = -0.7 - Math.sin(timeSec * 12) * 0.2;
@@ -371,26 +465,54 @@ export class StreetDramaSystem {
       this.headB.rotation.x = -0.15;
       this.charB.position.y = Math.abs(Math.cos(timeSec * 10)) * 0.04;
 
-      // Transition to cooling down near the end
-      if (this.timer <= 1.8) {
-        this.status = 'cooling_down';
-        this.updateBubble(this.bubbleA, 'Hừ! Bố mày nhớ mặt đấy!', '#6c757d');
-        this.updateBubble(this.bubbleB, 'Biến đi cho rảnh nợ!', '#6c757d');
+      if (this.timer <= 0) {
+        this.startWalkingOut();
       }
-    } else if (this.status === 'cooling_down') {
-      // Settle arms, look away
-      this.leftArmA.rotation.x = -0.1;
-      this.rightArmA.rotation.x = -0.1;
-      this.leftArmB.rotation.z = 0.1;
-      this.rightArmB.rotation.z = -0.1;
-      this.headA.rotation.set(0, 0, 0);
-      this.headB.rotation.set(0, 0, 0);
+      return;
+    }
+
+    // 4. WALKING OUT: Moving away towards exit points
+    if (this.status === 'walking_out') {
+      this.timer -= delta;
       this.charA.position.y = 0;
       this.charB.position.y = 0;
 
-      if (this.timer <= 0) {
+      const distA = this.charA.position.distanceTo(this.currentSpot.exitA);
+      const distB = this.charB.position.distanceTo(this.currentSpot.exitB);
+
+      if (distA > 0.15) {
+        const dirA = new THREE.Vector3().subVectors(this.currentSpot.exitA, this.charA.position).normalize();
+        this.charA.position.addScaledVector(dirA, Math.min(distA, walkSpeed * delta));
+        this.charA.lookAt(this.currentSpot.exitA);
+      }
+      if (distB > 0.15) {
+        const dirB = new THREE.Vector3().subVectors(this.currentSpot.exitB, this.charB.position).normalize();
+        this.charB.position.addScaledVector(dirB, Math.min(distB, walkSpeed * delta));
+        this.charB.lookAt(this.currentSpot.exitB);
+      }
+
+      // Walking limb swing animation
+      const swing = Math.sin(timeSec * 7) * 0.5;
+      this.leftLegA.rotation.x = swing;
+      this.rightLegA.rotation.x = -swing;
+      this.leftArmA.rotation.x = -swing * 0.5;
+      this.rightArmA.rotation.x = swing * 0.5;
+
+      this.leftLegB.rotation.x = -swing;
+      this.rightLegB.rotation.x = swing;
+      this.leftArmB.rotation.x = swing * 0.5;
+      this.rightArmB.rotation.x = -swing * 0.5;
+
+      this.headA.rotation.set(0, 0, 0);
+      this.headB.rotation.set(0, 0, 0);
+
+      // Finished walking out or time expired -> Hide and reset
+      if (this.timer <= 0 || (distA <= 0.2 && distB <= 0.2)) {
         this.status = 'hidden';
         this.root.visible = false;
+        this.bubbleA.visible = false;
+        this.bubbleB.visible = false;
+        this.nextEventCountdown = 180 + Math.random() * 120; // 3 to 5 minutes between arguments
       }
     }
   }
