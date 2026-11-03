@@ -249,6 +249,7 @@ export function App() {
     if (playerControllerRef.current) {
       playerControllerRef.current.position.set(spawnX, 0, spawnZ);
       playerControllerRef.current.rotationY = Math.PI / 2;
+      playerControllerRef.current.cameraYaw = -Math.PI / 2; // Position camera behind avatar facing into village
     }
 
     // Set store state with 100 starting credits

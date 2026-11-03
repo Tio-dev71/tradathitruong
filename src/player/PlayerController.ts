@@ -148,15 +148,15 @@ export class PlayerController {
         this.isSitting = false;
       }
 
-      const normX = moveRight / inputLength;
-      const normZ = -moveForward / inputLength;
+      // Camera forward and right vectors projected onto the horizontal ground plane (XZ)
+      // W moves forward into the view, S moves backward towards camera, D moves right, A moves left
+      const camForwardX = -Math.sin(this.cameraYaw);
+      const camForwardZ = -Math.cos(this.cameraYaw);
+      const camRightX = Math.cos(this.cameraYaw);
+      const camRightZ = -Math.sin(this.cameraYaw);
 
-      // Transform direction relative to camera angle
-      const sinYaw = Math.sin(this.cameraYaw);
-      const cosYaw = Math.cos(this.cameraYaw);
-
-      const worldDirX = normX * cosYaw - normZ * sinYaw;
-      const worldDirZ = normX * sinYaw + normZ * cosYaw;
+      const worldDirX = (moveForward * camForwardX + moveRight * camRightX) / inputLength;
+      const worldDirZ = (moveForward * camForwardZ + moveRight * camRightZ) / inputLength;
 
       // Target position
       const nextX = this.position.x + worldDirX * speed * delta;
