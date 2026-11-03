@@ -1,0 +1,12 @@
+# Caddy configuration for Trà Đá Thị Trường
+# Domain: tradathitruong.io.vn -> Reverse Proxy to localhost:3888 with auto SSL
+
+tradathitruong.io.vn {
+    reverse_proxy 127.0.0.1:3888 {
+        # WebSocket support for Socket.IO multiplayer
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
