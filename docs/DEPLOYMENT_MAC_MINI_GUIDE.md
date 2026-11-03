@@ -1,28 +1,52 @@
 # 🖥️ HƯỚNG DẪN DEPLOY TRÊN MAC MINI M1 LÀM SERVER
-### Domain: `tradathitruong.io.vn` | Port: `3888`
+### Domain: `tradathitruong.io.vn` | Port: `3888` | Cloudflare Tunnel
 
-Tài liệu hướng dẫn chi tiết cách biến máy tính **Mac mini M1 (Apple Silicon)** thành một máy chủ sản xuất (production server) chạy game 3D Web "Trà Đá Thị Trường" hoạt động 24/7.
-
----
-
-## BƯỚC 1: Cấu hình DNS Tên Miền `tradathitruong.io.vn`
-
-1. Truy cập trang quản lý tên miền (nhà cung cấp domain của bạn, e.g., Cloudflare, Namecheap, PA Việt Nam, Mắt Bão).
-2. Tạo 2 bản ghi **A Record**:
-   - **Type**: `A` | **Name**: `@` (hoặc `tradathitruong.io.vn`) | **Value**: `<IP_Công_Cộng_Của_Mac_Mini>` | **TTL**: Auto
-   - **Type**: `A` | **Name**: `www` | **Value**: `<IP_Công_Cộng_Của_Mac_Mini>` | **TTL**: Auto
-*(Để biết IP công cộng của Mac mini, mở Terminal gõ: `curl ifconfig.me`)*
+Tài liệu hướng dẫn chi tiết cách kết nối domain **`tradathitruong.io.vn`** vào máy tính **Mac mini M1** thông qua **Cloudflare Tunnel (Zero Trust)** - phương pháp tối ưu nhất, không cần mở port modem, không cần IP tĩnh, tự động có SSL HTTPS bảo mật.
 
 ---
 
-## BƯỚC 2: Mở Cổng (Port Forwarding) Trên Router / Modem Wi-Fi
+## CÁCH 1 (KHUYÊN DÙNG NHẤT): Cấu Hình Qua Cloudflare Tunnel Đã Có Sẵn
 
-Vào trang quản trị Modem Wi-Fi nhà bạn (thường là `192.168.1.1`):
-1. Tìm mục **Port Forwarding** (hoặc **Virtual Server**).
-2. Thêm rule chuyển tiếp các cổng sau về IP nội bộ của Mac mini (ví dụ `192.168.1.28`):
-   - **Cổng 80** (HTTP) -> `192.168.1.28:80`
-   - **Cổng 443** (HTTPS) -> `192.168.1.28:443`
-   - **Cổng 3888** (Node.js Port) -> `192.168.1.28:3888` (hoặc chỉ cần mở 80 & 443 nếu dùng Caddy/Nginx).
+Vì bạn đã có sẵn Tunnel tên `mac-m1-server` đang chạy rất ổn định trên Mac mini M1 (đang chạy trang `autotrader.fun`), bạn **không cần cài thêm bất kỳ tool nào**, chỉ cần thêm route trên giao diện web của Cloudflare:
+
+### Bước 1: Kích hoạt domain trên Cloudflare
+1. Tại trang Cloudflare của domain `tradathitruong.io.vn`, nhấn nút màu xanh **"Continue to activation"**.
+2. Thay đổi cặp Nameservers ở nhà đăng ký domain (Tenten, iNet, PA Việt Nam...) trỏ về 2 Nameserver của Cloudflare.
+3. Đợi vài phút khi domain chuyển sang trạng thái **Active**.
+
+### Bước 2: Thêm Route trên Cloudflare Tunnel `mac-m1-server`
+Vào **Cloudflare Zero Trust** -> **Networks** -> **Tunnels** -> Chọn tunnel **`mac-m1-server`**:
+1. Nhìn vào mục **Routes**, bấm nút **`+ Add route`** (hoặc tab **Public Hostname**).
+2. **Thêm Route cho Game chính**:
+   - **Subdomain**: Để trống (hoặc `@`)
+   - **Domain**: Chọn `tradathitruong.io.vn`
+   - **Path**: Để trống
+   - **Type**: `HTTP`
+   - **URL**: `localhost:3888`
+   - Bấm **Save route**.
+3. **Thêm Route cho Trang Admin riêng**:
+   - Bấm **`+ Add route`** tiếp một lần nữa:
+   - **Subdomain**: Điền `admin`
+   - **Domain**: Chọn `tradathitruong.io.vn`
+   - **Path**: Để trống
+   - **Type**: `HTTP`
+   - **URL**: `localhost:3888`
+   - Bấm **Save route**.
+
+*(Cloudflare sẽ tự động tạo bản ghi CNAME trỏ về tunnel và tự động cấp SSL HTTPS!)*
+
+### Bước 3: Kiểm tra bật WebSockets
+Vào Cloudflare Dashboard -> domain `tradathitruong.io.vn` -> Menu bên trái chọn **Network** -> Đảm bảo mục **WebSockets** đang bật **ON**.
+
+---
+
+## CÁCH 2: Cấu Hình Truyền Thống Bằng DNS A Record & Caddy
+
+Nếu không dùng Cloudflare Tunnel:
+1. Mở Terminal kiểm tra IP công cộng: `curl ifconfig.me`
+2. Trỏ bản ghi A Record `@` và `www` về IP đó.
+3. Mở port 80 và 443 trên Modem Wi-Fi trỏ về IP nội bộ Mac mini.
+4. Chạy `sudo caddy start` với file `Caddyfile` có sẵn trong dự án.
 
 ---
 
