@@ -31,6 +31,11 @@ export interface MultiplayerCallbacks {
     candles?: { o: number; h: number; l: number; c: number }[];
   }) => void;
   onMarketTickers?: (tickers: Record<string, any>) => void;
+  // WebRTC Voice Chat Callbacks
+  onVoicePeerJoined?: (data: { peerId: string; socketId: string; nickname: string }) => void;
+  onVoiceSignal?: (data: { fromSocketId: string; fromPlayerId: string; signal: any }) => void;
+  onVoicePlayerSpeaking?: (data: { playerId: string; isSpeaking: boolean }) => void;
+  onVoicePeerLeft?: (data: { peerId: string; socketId: string }) => void;
 }
 
 export class MultiplayerService {
@@ -121,6 +126,47 @@ export class MultiplayerService {
     this.socket.on('market:tickers', (data) => {
       this.callbacks.onMarketTickers?.(data);
     });
+
+    // WebRTC Voice Chat Listeners
+    this.socket.on('voice:peer_joined', (data) => {
+      this.callbacks.onVoicePeerJoined?.(data);
+    });
+
+    this.socket.on('voice:signal', (data) => {
+      this.callbacks.onVoiceSignal?.(data);
+    });
+
+    this.socket.on('voice:player_speaking', (data) => {
+      this.callbacks.onVoicePlayerSpeaking?.(data);
+    });
+
+    this.socket.on('voice:peer_left', (data) => {
+      this.callbacks.onVoicePeerLeft?.(data);
+    });
+  }
+
+  public getSocket(): Socket | null {
+    return this.socket;
+  }
+
+  public joinVoice() {
+    if (!this.socket || !this.socket.connected) return;
+    this.socket.emit('voice:join');
+  }
+
+  public sendVoiceSignal(toPlayerId: string, signal: unknown, toSocketId?: string) {
+    if (!this.socket || !this.socket.connected) return;
+    this.socket.emit('voice:signal', { toPlayerId, toSocketId, signal });
+  }
+
+  public sendVoiceSpeaking(isSpeaking: boolean) {
+    if (!this.socket || !this.socket.connected) return;
+    this.socket.emit('voice:speaking', { isSpeaking });
+  }
+
+  public leaveVoice() {
+    if (!this.socket || !this.socket.connected) return;
+    this.socket.emit('voice:leave');
   }
 
   public sendMove(

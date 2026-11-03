@@ -11,10 +11,12 @@ export interface AvatarRig {
   rightLeg: THREE.Group;
   nametagSprite: THREE.Sprite;
   speechSprite: THREE.Sprite;
+  speakingSprite: THREE.Sprite;
   updateAnimation: (time: number, isMoving: boolean, isRunning: boolean, isSitting: boolean, emote?: string) => void;
   updateNametag: (nickname: string, role: PlayerRole) => void;
   showSpeech: (text: string, durationMs?: number) => void;
   hideSpeech: () => void;
+  setSpeaking: (isSpeaking: boolean) => void;
 }
 
 export function createNametagTexture(nickname: string, role: string): THREE.CanvasTexture {
@@ -155,6 +157,32 @@ export function createPlayerSpeechTexture(text: string): THREE.CanvasTexture {
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+export function createSpeakingTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, 128, 128);
+
+  ctx.fillStyle = 'rgba(16, 185, 129, 0.95)';
+  ctx.beginPath();
+  ctx.arc(64, 64, 52, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  ctx.font = '54px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🎙️', 64, 68);
+
+  const texture = new THREE.CanvasTexture(canvas);
   texture.needsUpdate = true;
   return texture;
 }
@@ -352,6 +380,20 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
   speechSprite.visible = false;
   root.add(speechSprite);
 
+  // --- Speaking Indicator Sprite (Microphone Icon) ---
+  const speakingTex = createSpeakingTexture();
+  const speakingMat = new THREE.SpriteMaterial({ map: speakingTex, depthTest: false, transparent: true });
+  const speakingSprite = new THREE.Sprite(speakingMat);
+  speakingSprite.position.set(0.65, 1.88, 0);
+  speakingSprite.scale.set(0.32, 0.32, 1);
+  speakingSprite.renderOrder = 1001;
+  speakingSprite.visible = false;
+  root.add(speakingSprite);
+
+  const setSpeaking = (isSpeaking: boolean) => {
+    speakingSprite.visible = isSpeaking;
+  };
+
   let speechTimeout: NodeJS.Timeout | null = null;
 
   const showSpeech = (text: string, durationMs = 5000) => {
@@ -494,6 +536,10 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
       headGroup.position.y = 1.05 + Math.sin(time * 2.5) * 0.02;
       bodyMesh.rotation.x = 0;
     }
+
+    if (speakingSprite.visible) {
+      speakingSprite.scale.setScalar(0.32 + Math.sin(time * 12) * 0.04);
+    }
   };
 
   const updateNametag = (newNickname: string, newRole: PlayerRole) => {
@@ -512,10 +558,12 @@ export function buildChibiAvatar(config: AvatarConfig, nickname: string, role: P
     rightLeg,
     nametagSprite,
     speechSprite,
+    speakingSprite,
     updateAnimation,
     updateNametag,
     showSpeech,
     hideSpeech,
+    setSpeaking,
   };
 }
 

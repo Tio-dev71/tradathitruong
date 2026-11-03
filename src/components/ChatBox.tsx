@@ -13,8 +13,10 @@ export const ChatBox: React.FC<Props> = ({ onEmote, onSendChat }) => {
   const [inputText, setInputText] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -24,6 +26,76 @@ export const ChatBox: React.FC<Props> = ({ onEmote, onSendChat }) => {
       mobileScrollRef.current.scrollTop = mobileScrollRef.current.scrollHeight;
     }
   }, [chatMessages, isMobileOpen]);
+
+  // Clean up speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+    };
+  }, []);
+
+  const handleToggleSpeechToText = () => {
+    soundEngine.playUiClick();
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) {
+      alert('Trình duyệt chưa hỗ trợ Web Speech API nhận diện giọng nói. Bạn hãy dùng Google Chrome, Edge hoặc Safari để nói vào micro nhé!');
+      return;
+    }
+
+    try {
+      const rec = new SpeechRec();
+      recognitionRef.current = rec;
+      rec.lang = 'vi-VN';
+      rec.continuous = false;
+      rec.interimResults = true;
+
+      rec.onstart = () => {
+        setIsListening(true);
+      };
+
+      rec.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript.trim()) {
+          setInputText(transcript.trim());
+        }
+      };
+
+      rec.onerror = (err: any) => {
+        console.warn('SpeechRecognition error:', err);
+        setIsListening(false);
+        if (err.error === 'not-allowed') {
+          alert('Quyền truy cập Micro bị từ chối. Vui lòng cho phép quyền Mic trong trình duyệt!');
+        }
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      rec.start();
+    } catch (err) {
+      console.warn('Could not start speech recognition:', err);
+      setIsListening(false);
+    }
+  };
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,10 +216,25 @@ export const ChatBox: React.FC<Props> = ({ onEmote, onSendChat }) => {
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
               onKeyUp={(e) => e.stopPropagation()}
-              placeholder="Nói gì đó với mọi người..."
+              placeholder={isListening ? "🎙️ Đang lắng nghe giọng bạn..." : "Nói gì đó với mọi người..."}
               maxLength={180}
-              className="flex-1 bg-black/60 border border-amber-800/60 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+              className={`flex-1 bg-black/60 border rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none transition ${
+                isListening ? 'border-rose-500 bg-rose-950/40 animate-pulse' : 'border-amber-800/60 focus:border-amber-400'
+              }`}
             />
+            {/* Mic to text button */}
+            <button
+              type="button"
+              onClick={handleToggleSpeechToText}
+              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer flex items-center justify-center shrink-0 ${
+                isListening
+                  ? 'bg-rose-600 text-white border-rose-400 animate-pulse shadow-rose-600/50 shadow-md'
+                  : 'bg-amber-950/90 text-amber-300 border-amber-800/70 hover:bg-amber-900 hover:text-white'
+              }`}
+              title={isListening ? 'Đang nghe tiếng Việt... Bấm để dừng' : 'Bấm mic nói tiếng Việt (Voice to Text)'}
+            >
+              🎙️
+            </button>
             <button
               type="submit"
               className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 font-bold text-xs text-black transition cursor-pointer"
@@ -274,10 +361,24 @@ export const ChatBox: React.FC<Props> = ({ onEmote, onSendChat }) => {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Nhập tin nhắn..."
+                placeholder={isListening ? "🎙️ Đang nghe... Hãy nói tiếng Việt!" : "Nhập tin nhắn..."}
                 maxLength={180}
-                className="flex-1 bg-black/60 border border-amber-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400"
+                className={`flex-1 bg-black/60 border rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition ${
+                  isListening ? 'border-rose-500 bg-rose-950/40 animate-pulse' : 'border-amber-700/80 focus:border-amber-400'
+                }`}
               />
+              <button
+                type="button"
+                onClick={handleToggleSpeechToText}
+                className={`px-3 py-2 rounded-xl border text-xs font-bold transition cursor-pointer flex items-center justify-center shrink-0 ${
+                  isListening
+                    ? 'bg-rose-600 text-white border-rose-400 animate-pulse shadow-rose-600/50 shadow-md'
+                    : 'bg-amber-950/90 text-amber-300 border-amber-800/70 active:scale-95'
+                }`}
+                title={isListening ? 'Đang nghe... Bấm để dừng' : 'Bấm mic nói tiếng Việt'}
+              >
+                🎙️
+              </button>
               <button
                 type="submit"
                 className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 font-black text-xs text-black active:scale-95 cursor-pointer shadow"

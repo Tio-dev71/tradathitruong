@@ -5,6 +5,7 @@ import { PlayerController } from './player/PlayerController';
 import { buildChibiAvatar, type AvatarRig } from './player/AvatarBuilder';
 import { multiplayerService } from './services/multiplayerService';
 import { soundEngine } from './services/soundEngine';
+import { voiceChatService } from './services/voiceChatService';
 import { useGameStore } from './store/gameStore';
 
 // UI Overlays
@@ -54,11 +55,20 @@ export function App() {
     isCreateModalOpen,
     setIsCreateModalOpen,
     setMarketTickers,
+    isMicOn,
+    isLocalSpeaking,
   } = useGameStore();
 
   const [isSitting, setIsSitting] = useState(false);
   const [canInteractNpc, setCanInteractNpc] = useState(false);
   const [cameraMode, setCameraMode] = useState<'third' | 'first'>('third');
+
+  // Synchronize local avatar speaking indicator
+  useEffect(() => {
+    if (localAvatarRigRef.current) {
+      localAvatarRigRef.current.setSpeaking(isLocalSpeaking);
+    }
+  }, [isLocalSpeaking]);
 
   // 1. Initialize 3D World Scene
   useEffect(() => {
@@ -103,6 +113,12 @@ export function App() {
           ctrl.isSitting
         );
       }
+
+      // Update WebRTC voice proximity audio attenuation
+      voiceChatService.updateProximityVolumes(
+        { x: ctrl.position.x, y: ctrl.position.y, z: ctrl.position.z },
+        scene.getRemotePlayerPositions()
+      );
 
       // Check distance to NPC "Trà Đá Thị Trường" at (-1.8, 0, -1.2)
       const npcPos = new THREE.Vector3(-1.8, 0, -1.2);
@@ -433,8 +449,14 @@ export function App() {
         onErrorJoin: (data) => {
           alert(data.message);
         },
+        onVoicePlayerSpeaking: (data) => {
+          world.setPlayerSpeaking(data.playerId, data.isSpeaking);
+        },
       }
     );
+
+    // Initialize WebRTC Voice Chat signaling listener
+    voiceChatService.init();
   };
 
   // Toggle Sit / Stand with clean snap to nearest stool
@@ -509,6 +531,7 @@ export function App() {
             isSitting={isSitting}
             cameraMode={cameraMode}
             onToggleCameraMode={handleToggleCameraMode}
+            onToggleMic={() => voiceChatService.toggleMic()}
           />
           <ChatBox
             onEmote={handleTriggerEmote}
@@ -536,6 +559,9 @@ export function App() {
               onToggleCameraMode={handleToggleCameraMode}
               cameraMode={cameraMode}
               canInteract={canInteractNpc}
+              onToggleMic={() => voiceChatService.toggleMic()}
+              isMicOn={isMicOn}
+              isSpeaking={isLocalSpeaking}
             />
           )}
         </>

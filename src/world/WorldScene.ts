@@ -226,6 +226,25 @@ export class WorldScene {
     remote.rig.showSpeech(text);
   }
 
+  public setPlayerSpeaking(id: string, isSpeaking: boolean) {
+    const remote = this.remotePlayers.get(id);
+    if (remote) {
+      remote.rig.setSpeaking(isSpeaking);
+    }
+  }
+
+  public getRemotePlayerPositions(): Map<string, { x: number; y: number; z: number }> {
+    const map = new Map<string, { x: number; y: number; z: number }>();
+    for (const [id, remote] of this.remotePlayers.entries()) {
+      map.set(id, {
+        x: remote.rig.root.position.x,
+        y: remote.rig.root.position.y,
+        z: remote.rig.root.position.z,
+      });
+    }
+    return map;
+  }
+
   public removeRemotePlayer(id: string) {
     const remote = this.remotePlayers.get(id);
     if (!remote) return;

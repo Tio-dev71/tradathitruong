@@ -39,6 +39,11 @@ interface GameState {
   isTopupOpen: boolean;
   creditsNotification: string | null;
 
+  // Voice Chat
+  isMicOn: boolean;
+  isLocalSpeaking: boolean;
+  speakingPlayers: Record<string, boolean>;
+
   // Settings
   settings: GameSettings;
 
@@ -64,6 +69,9 @@ interface GameState {
   setIsCreateModalOpen: (open: boolean) => void;
   setIsTopupOpen: (open: boolean) => void;
   toggleSound: () => void;
+  setMicOn: (isMicOn: boolean) => void;
+  setLocalSpeaking: (isLocalSpeaking: boolean) => void;
+  setPlayerSpeaking: (playerId: string, isSpeaking: boolean) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -79,6 +87,9 @@ export const useGameStore = create<GameState>((set) => ({
   isTopupOpen: false,
   creditsNotification: null,
   marketTickers: {},
+  isMicOn: false,
+  isLocalSpeaking: false,
+  speakingPlayers: {},
 
   dialogue: {
     isOpen: false,
@@ -161,6 +172,18 @@ export const useGameStore = create<GameState>((set) => ({
   toggleSound: () =>
     set((state) => ({
       settings: { ...state.settings, soundEnabled: !state.settings.soundEnabled },
+    })),
+
+  setMicOn: (isMicOn) => set({ isMicOn }),
+
+  setLocalSpeaking: (isLocalSpeaking) => set({ isLocalSpeaking }),
+
+  setPlayerSpeaking: (playerId, isSpeaking) =>
+    set((state) => ({
+      speakingPlayers: {
+        ...state.speakingPlayers,
+        [playerId]: isSpeaking,
+      },
     })),
 }));
 

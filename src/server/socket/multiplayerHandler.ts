@@ -32,6 +32,13 @@ class ActivePlayersStore {
     return this.players.get(socketId);
   }
 
+  public getSocketIdByPlayerId(playerId: string): string | undefined {
+    for (const [socketId, sessionId] of this.socketToSession.entries()) {
+      if (sessionId === playerId) return socketId;
+    }
+    return undefined;
+  }
+
   public getOnlinePlayers(): PlayerData[] {
     return Array.from(this.players.values());
   }
@@ -427,10 +434,59 @@ export function setupMultiplayerSocket(io: SocketIOServer) {
       }
     });
 
-    // 7. Disconnection
+    // 7. WebRTC Proximity Voice Chat Signaling
+    socket.on('voice:join', () => {
+      const player = activePlayersStore.getPlayerBySocket(socket.id);
+      if (!player) return;
+      // Broadcast to other players that this peer entered voice chat
+      socket.broadcast.emit('voice:peer_joined', {
+        peerId: player.id,
+        socketId: socket.id,
+        nickname: player.nickname,
+      });
+    });
+
+    socket.on('voice:signal', (data: { toSocketId?: string; toPlayerId?: string; signal: unknown }) => {
+      const player = activePlayersStore.getPlayerBySocket(socket.id);
+      if (!player) return;
+
+      let targetSocketId = data.toSocketId;
+      if (!targetSocketId && data.toPlayerId) {
+        targetSocketId = activePlayersStore.getSocketIdByPlayerId(data.toPlayerId);
+      }
+
+      if (targetSocketId) {
+        io.to(targetSocketId).emit('voice:signal', {
+          fromSocketId: socket.id,
+          fromPlayerId: player.id,
+          signal: data.signal,
+        });
+      }
+    });
+
+    socket.on('voice:speaking', (data: { isSpeaking: boolean }) => {
+      const player = activePlayersStore.getPlayerBySocket(socket.id);
+      if (!player) return;
+      socket.broadcast.emit('voice:player_speaking', {
+        playerId: player.id,
+        isSpeaking: !!data.isSpeaking,
+      });
+    });
+
+    socket.on('voice:leave', () => {
+      const player = activePlayersStore.getPlayerBySocket(socket.id);
+      if (!player) return;
+      socket.broadcast.emit('voice:peer_left', {
+        peerId: player.id,
+        socketId: socket.id,
+      });
+    });
+
+    // 8. Disconnection
     socket.on('disconnect', () => {
       const removed = activePlayersStore.removePlayer(socket.id);
       if (removed) {
+        socket.broadcast.emit('voice:peer_left', { peerId: removed.id, socketId: socket.id });
         socket.broadcast.emit('player:left', { playerId: removed.id });
         io.emit('room:online_count', { count: activePlayersStore.getOnlinePlayers().length });
       }

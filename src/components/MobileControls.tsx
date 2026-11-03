@@ -9,6 +9,9 @@ interface Props {
   onToggleCameraMode?: () => void;
   cameraMode?: 'third' | 'first';
   canInteract?: boolean;
+  onToggleMic?: () => void;
+  isMicOn?: boolean;
+  isSpeaking?: boolean;
 }
 
 export const MobileControls: React.FC<Props> = ({
@@ -20,6 +23,9 @@ export const MobileControls: React.FC<Props> = ({
   onToggleCameraMode,
   cameraMode = 'third',
   canInteract = false,
+  onToggleMic,
+  isMicOn = false,
+  isSpeaking = false,
 }) => {
   const joystickBaseRef = useRef<HTMLDivElement>(null);
   const activeTouchIdRef = useRef<number | null>(null);
@@ -115,6 +121,26 @@ export const MobileControls: React.FC<Props> = ({
         <div className="flex flex-col items-end gap-2.5 pointer-events-auto">
           {/* Secondary helper buttons row */}
           <div className="flex items-center gap-2">
+            {/* Live Voice Chat Mic Toggle */}
+            {onToggleMic && (
+              <button
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  onToggleMic();
+                }}
+                className={`w-11 h-11 rounded-full border-2 flex items-center justify-center font-bold text-xs shadow-lg transition active:scale-95 ${
+                  isMicOn
+                    ? isSpeaking
+                      ? 'bg-emerald-600 text-white border-emerald-300 animate-pulse ring-2 ring-emerald-400'
+                      : 'bg-emerald-950/90 text-emerald-300 border-emerald-500'
+                    : 'bg-black/60 text-stone-400 border-amber-700/80'
+                }`}
+                title="Bật / Tắt Mic"
+              >
+                <span>{isMicOn ? (isSpeaking ? '🗣️' : '🎙️') : '🔇'}</span>
+              </button>
+            )}
+
             {/* View Mode Toggle */}
             {onToggleCameraMode && (
               <button

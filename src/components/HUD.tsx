@@ -8,6 +8,7 @@ interface Props {
   isSitting: boolean;
   cameraMode?: 'third' | 'first';
   onToggleCameraMode?: () => void;
+  onToggleMic?: () => void;
 }
 
 export const HUD: React.FC<Props> = ({
@@ -15,6 +16,7 @@ export const HUD: React.FC<Props> = ({
   isSitting,
   cameraMode = 'third',
   onToggleCameraMode,
+  onToggleMic,
 }) => {
   const {
     player,
@@ -25,6 +27,8 @@ export const HUD: React.FC<Props> = ({
     cooldownRemaining,
     creditsNotification,
     marketTickers,
+    isMicOn,
+    isLocalSpeaking,
   } = useGameStore();
 
   const handleSoundToggle = () => {
@@ -152,6 +156,35 @@ export const HUD: React.FC<Props> = ({
               <span>{cameraMode === 'first' ? '👁️' : '🎥'}</span>
               <span className="hidden sm:inline">{cameraMode === 'first' ? 'Góc nhìn 1' : 'Góc nhìn 3'}</span>
               <span className="sm:hidden font-bold">{cameraMode === 'first' ? '1' : '3'}</span>
+            </button>
+          )}
+
+          {/* Live Voice Chat Mic Toggle */}
+          {onToggleMic && (
+            <button
+              onClick={() => {
+                soundEngine.playUiClick();
+                onToggleMic();
+              }}
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border text-[11px] sm:text-xs font-bold transition shadow cursor-pointer ${
+                isMicOn
+                  ? isLocalSpeaking
+                    ? 'bg-emerald-600 text-white border-emerald-300 animate-pulse ring-2 ring-emerald-400/80 shadow-emerald-500/50 shadow-lg'
+                    : 'bg-emerald-950/90 text-emerald-300 border-emerald-500/80 hover:bg-emerald-900'
+                  : 'bg-black/60 text-stone-400 border-stone-800 hover:text-white hover:border-amber-800'
+              }`}
+              title={
+                isMicOn
+                  ? isLocalSpeaking
+                    ? 'Đang nói vào mic (Click để tắt)'
+                    : 'Mic đang bật (Click để tắt mic)'
+                  : 'Bật Micro đàm thoại trực tiếp với mọi người'
+              }
+            >
+              <span>{isMicOn ? (isLocalSpeaking ? '🗣️' : '🎙️') : '🔇'}</span>
+              <span className="hidden sm:inline">
+                {isMicOn ? (isLocalSpeaking ? 'Đang nói...' : 'Mic Bật') : 'Mic Tắt'}
+              </span>
             </button>
           )}
 
