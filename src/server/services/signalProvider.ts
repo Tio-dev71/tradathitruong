@@ -125,17 +125,24 @@ export class MockSignalProvider implements ISignalProvider {
 
 export class WebhookSignalProvider implements ISignalProvider {
   public async getAvailableSignal(_role?: string, tier?: 'VIP' | 'M1'): Promise<SignalData | null> {
-    const signals = db.getActiveSignals(10, tier);
+    // 1. Tìm kèo thuộc tier tương ứng đang ACTIVE (chưa Full TP)
+    let signals = db.getActiveSignals(10, tier);
+    
+    // 2. Nếu phòng đó tạm chưa có, lấy bất kỳ kèo nào đang ACTIVE chưa Full TP
     if (!signals || signals.length === 0) {
-      // Fallback 1: Any active signal in DB
-      const anySignals = db.getActiveSignals(10);
-      if (anySignals && anySignals.length > 0) {
-        return anySignals[0];
-      }
-      // Khi không có tín hiệu webhook từ bot, trả về null để user biết chính xác chưa có kèo mới
+      signals = db.getActiveSignals(10);
+    }
+
+    // 3. Dự phòng mở rộng: lấy kèo bất kỳ trong cơ sở dữ liệu chưa Full TP
+    if (!signals || signals.length === 0) {
+      signals = db.getNonFullTPSignals(10);
+    }
+
+    if (!signals || signals.length === 0) {
       return null;
     }
-    // Trả về tín hiệu thật mới nhất từ bot Discord/TradingView
+
+    // Trả về tín hiệu thật mới nhất từ bot Discord/TradingView (chưa Full TP)
     return signals[0];
   }
 

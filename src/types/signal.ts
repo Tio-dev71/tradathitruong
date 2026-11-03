@@ -1,6 +1,6 @@
 export type MarketType = 'CRYPTO' | 'FOREX' | 'VN_STOCK' | 'COMMODITY';
 export type SignalDirection = 'LONG' | 'SHORT' | 'WAIT';
-export type SignalStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+export type SignalStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'FULL_TP';
 
 export interface SignalData {
   id: string;

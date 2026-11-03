@@ -57,6 +57,7 @@ export function App() {
 
   const [isSitting, setIsSitting] = useState(false);
   const [canInteractNpc, setCanInteractNpc] = useState(false);
+  const [cameraMode, setCameraMode] = useState<'third' | 'first'>('third');
 
   // 1. Initialize 3D World Scene
   useEffect(() => {
@@ -72,6 +73,11 @@ export function App() {
       { x: -5, y: 0, z: 5 }
     );
     playerControllerRef.current = controller;
+
+    // Connect camera mode change callback
+    controller.onCameraModeChange = (mode) => {
+      setCameraMode(mode);
+    };
 
     // Connect interact key
     controller.onInteract = () => {
@@ -458,6 +464,12 @@ export function App() {
     }
   };
 
+  const handleToggleCameraMode = () => {
+    if (playerControllerRef.current) {
+      playerControllerRef.current.toggleCameraMode();
+    }
+  };
+
   // Local emote triggering
   const handleTriggerEmote = (emote: 'wave' | 'laugh' | 'sip_tea' | 'shrug' | 'cheer') => {
     if (playerControllerRef.current) {
@@ -491,7 +503,12 @@ export function App() {
       {/* Main Game UI HUD */}
       {!isCreateModalOpen && (
         <>
-          <HUD onToggleSit={handleToggleSit} isSitting={isSitting} />
+          <HUD
+            onToggleSit={handleToggleSit}
+            isSitting={isSitting}
+            cameraMode={cameraMode}
+            onToggleCameraMode={handleToggleCameraMode}
+          />
           <ChatBox
             onEmote={handleTriggerEmote}
             onSendChat={(text) => {

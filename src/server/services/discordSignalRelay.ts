@@ -199,6 +199,8 @@ export class DiscordSignalRelayService {
     const tier: 'VIP' | 'M1' = (isVipChannel || (isVipSymbol && !isM1)) ? 'VIP' : 'M1';
 
     const now = Date.now();
+    const isFullTP = /full\s*tp/i.test(parsedSignal.note || '');
+
     const finalSignal: SignalData = {
       id: `sig_discord_${now}_${Math.random().toString(36).substring(2, 7)}`,
       symbol: parsedSignal.symbol,
@@ -214,11 +216,33 @@ export class DiscordSignalRelayService {
       channelId: payload.channel_id || undefined,
       tier,
       createdAt: now,
-      expiresAt: now + 2 * 3600 * 1000, // 2 hours
-      status: 'ACTIVE',
+      expiresAt: isFullTP ? now : now + 30 * 24 * 3600 * 1000, // 30 days if active
+      status: isFullTP ? 'FULL_TP' : 'ACTIVE',
     };
 
-    // 1. Insert into SQLite Database
+    if (isFullTP) {
+      // 1. Khi lệnh chạm Full TP -> Đóng tất cả các lệnh trước đó của cặp tiền này
+      db.markSignalFullTP(finalSignal.symbol);
+      db.insertSignal(finalSignal);
+
+      // Thông báo Full TP trong phòng chơi
+      if (this.io) {
+        this.io.emit('chat:received', {
+          id: 'sig_ann_' + Date.now(),
+          senderId: 'SYSTEM',
+          senderName: 'Hội Quán Trà Đá',
+          senderRole: 'Trà Quán',
+          content: `🎯 [FULL TP THẮNG LỚN] Kèo ${finalSignal.symbol} đã hoàn thành mục tiêu Full TP! Chúc mừng các đại hiệp!`,
+          timestamp: Date.now(),
+          type: 'system',
+        });
+        this.io.emit('signal:full_tp', finalSignal);
+      }
+
+      return { success: true, signal: finalSignal };
+    }
+
+    // 1. Insert active signal into SQLite Database (Chưa Full TP thì nhận luôn và giữ active)
     db.insertSignal(finalSignal);
 
     // 2. Broadcast via Socket.IO to all players

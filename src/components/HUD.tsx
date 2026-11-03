@@ -6,9 +6,16 @@ import { multiplayerService } from '../services/multiplayerService';
 interface Props {
   onToggleSit: () => void;
   isSitting: boolean;
+  cameraMode?: 'third' | 'first';
+  onToggleCameraMode?: () => void;
 }
 
-export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
+export const HUD: React.FC<Props> = ({
+  onToggleSit,
+  isSitting,
+  cameraMode = 'third',
+  onToggleCameraMode,
+}) => {
   const {
     player,
     onlineCount,
@@ -154,6 +161,25 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
             {isSitting ? '🧍 Đứng lên' : '🪑 Ngồi ghế'}
           </button>
 
+          {/* First-person / Third-person View Toggle */}
+          {onToggleCameraMode && (
+            <button
+              onClick={() => {
+                soundEngine.playUiClick();
+                onToggleCameraMode();
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition shadow cursor-pointer ${
+                cameraMode === 'first'
+                  ? 'bg-amber-500 text-stone-950 border-amber-300 shadow-amber-500/30'
+                  : 'bg-black/60 text-amber-200 border-amber-800 hover:bg-black/80'
+              }`}
+              title="Đổi góc nhìn thứ 1 / thứ 3 (Phím [V] hoặc cuộn chuột)"
+            >
+              <span>{cameraMode === 'first' ? '👁️' : '🎥'}</span>
+              <span>{cameraMode === 'first' ? 'Góc nhìn 1' : 'Góc nhìn 3'}</span>
+            </button>
+          )}
+
           {/* Sound Toggle */}
           <button
             onClick={handleSoundToggle}
@@ -171,6 +197,8 @@ export const HUD: React.FC<Props> = ({ onToggleSit, isSitting }) => {
           <span><b className="text-amber-400">WASD</b> Di chuyển</span>
           <span>•</span>
           <span><b className="text-amber-400">Shift</b> Chạy nhanh</span>
+          <span>•</span>
+          <span><b className="text-amber-400">[V]</b> Góc nhìn 1/3</span>
           <span>•</span>
           <span><b className="text-amber-400">Chuột</b> Xoay camera & cuộn zoom</span>
           <span>•</span>

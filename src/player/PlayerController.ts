@@ -14,11 +14,13 @@ export class PlayerController {
   private walkSpeed = 4.2;
   private runSpeed = 7.8;
 
-  // Third-person camera parameters
+  // Camera parameters
   public cameraDistance = 6.5;
   public cameraPitch = 0.35; // vertical angle in radians (above ground)
   public cameraYaw = 0; // horizontal angle in radians
   private targetCameraPos = new THREE.Vector3();
+  public cameraMode: 'third' | 'first' = 'third';
+  public onCameraModeChange?: (mode: 'third' | 'first') => void;
 
   // Input states
   private keys: Record<string, boolean> = {};
@@ -52,6 +54,30 @@ export class PlayerController {
     this.isPointerDown = false;
   }
 
+  public toggleCameraMode(): 'third' | 'first' {
+    this.cameraMode = this.cameraMode === 'third' ? 'first' : 'third';
+    if (this.cameraMode === 'third') {
+      this.cameraDistance = Math.max(4.0, this.cameraDistance);
+      this.cameraPitch = Math.max(0.1, Math.min(Math.PI / 2.3, this.cameraPitch));
+    } else {
+      // First person initial pitch level
+      this.cameraPitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraPitch));
+    }
+    this.onCameraModeChange?.(this.cameraMode);
+    return this.cameraMode;
+  }
+
+  public setCameraMode(mode: 'third' | 'first') {
+    if (this.cameraMode !== mode) {
+      this.cameraMode = mode;
+      if (this.cameraMode === 'third') {
+        this.cameraDistance = Math.max(4.0, this.cameraDistance);
+        this.cameraPitch = Math.max(0.1, Math.min(Math.PI / 2.3, this.cameraPitch));
+      }
+      this.onCameraModeChange?.(this.cameraMode);
+    }
+  }
+
   private bindEvents() {
     const normalizeKey = (code: string, key: string): string => {
       const lower = key ? key.toLowerCase() : '';
@@ -63,7 +89,7 @@ export class PlayerController {
     };
 
     window.addEventListener('keydown', (e) => {
-      // Don't capture WASD if typing in chat input
+      // Don't capture WASD or V if typing in chat input
       if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') {
         return;
       }
@@ -72,6 +98,11 @@ export class PlayerController {
 
       if (e.code === 'KeyE' || e.key === 'e' || e.key === 'E') {
         this.onInteract?.();
+      }
+
+      // [V] Switch between First-Person and Third-Person View
+      if (e.code === 'KeyV' || e.key === 'v' || e.key === 'V') {
+        this.toggleCameraMode();
       }
     });
 
@@ -93,7 +124,7 @@ export class PlayerController {
       }
     });
 
-    // Mouse drag for camera orbit
+    // Mouse drag for camera orbit / aim
     this.domElement.addEventListener('pointerdown', (e) => {
       this.isPointerDown = true;
       this.prevMouseX = e.clientX;
@@ -108,17 +139,37 @@ export class PlayerController {
       this.prevMouseY = e.clientY;
 
       this.cameraYaw -= dx * 0.005;
-      this.cameraPitch = Math.max(0.1, Math.min(Math.PI / 2.3, this.cameraPitch + dy * 0.004));
+      if (this.cameraMode === 'first') {
+        // First-person view: look up and down freely (-78 deg to +78 deg)
+        this.cameraPitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.cameraPitch + dy * 0.004));
+      } else {
+        // Third-person view: stay above ground level
+        this.cameraPitch = Math.max(0.1, Math.min(Math.PI / 2.3, this.cameraPitch + dy * 0.004));
+      }
     });
 
     window.addEventListener('pointerup', () => {
       this.isPointerDown = false;
     });
 
-    // Mouse scroll for camera zoom
+    // Mouse scroll for camera zoom & switching between 1st/3rd person
     this.domElement.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.cameraDistance = Math.max(3.2, Math.min(12.0, this.cameraDistance + e.deltaY * 0.005));
+      if (this.cameraMode === 'first') {
+        if (e.deltaY > 25) {
+          // Scrolling back zooms out to third person
+          this.cameraDistance = 4.0;
+          this.toggleCameraMode();
+        }
+      } else {
+        const nextDist = this.cameraDistance + e.deltaY * 0.005;
+        if (nextDist < 2.2 && e.deltaY < 0) {
+          // Scrolling all the way in enters first-person view
+          this.toggleCameraMode();
+        } else {
+          this.cameraDistance = Math.max(2.5, Math.min(12.0, nextDist));
+        }
+      }
     }, { passive: false });
   }
 
@@ -142,18 +193,17 @@ export class PlayerController {
     const inputLength = Math.sqrt(moveForward * moveForward + moveRight * moveRight);
     this.isMoving = inputLength > 0.1;
 
+    // Camera horizontal vectors
+    const camForwardX = -Math.sin(this.cameraYaw);
+    const camForwardZ = -Math.cos(this.cameraYaw);
+    const camRightX = Math.cos(this.cameraYaw);
+    const camRightZ = -Math.sin(this.cameraYaw);
+
     if (this.isMoving) {
       if (this.isSitting) {
         // Stand up if moving
         this.isSitting = false;
       }
-
-      // Camera forward and right vectors projected onto the horizontal ground plane (XZ)
-      // W moves forward into the view, S moves backward towards camera, D moves right, A moves left
-      const camForwardX = -Math.sin(this.cameraYaw);
-      const camForwardZ = -Math.cos(this.cameraYaw);
-      const camRightX = Math.cos(this.cameraYaw);
-      const camRightZ = -Math.sin(this.cameraYaw);
 
       const worldDirX = (moveForward * camForwardX + moveRight * camRightX) / inputLength;
       const worldDirZ = (moveForward * camForwardZ + moveRight * camRightZ) / inputLength;
@@ -172,12 +222,21 @@ export class PlayerController {
       this.position.x = resolved.x;
       this.position.z = resolved.z;
 
-      // Smoothly rotate avatar towards movement direction
-      const targetAngle = Math.atan2(worldDirX, worldDirZ);
-      let angleDiff = targetAngle - this.rotationY;
-      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-      this.rotationY += angleDiff * Math.min(1.0, delta * 12);
+      if (this.cameraMode === 'first') {
+        // In first person, avatar faces camera orientation
+        this.rotationY = this.cameraYaw;
+      } else {
+        // Smoothly rotate avatar towards movement direction in third-person
+        const targetAngle = Math.atan2(worldDirX, worldDirZ);
+        let angleDiff = targetAngle - this.rotationY;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        this.rotationY += angleDiff * Math.min(1.0, delta * 12);
+      }
+    } else {
+      if (this.cameraMode === 'first') {
+        this.rotationY = this.cameraYaw;
+      }
     }
 
     // Handle Emote timer
@@ -193,23 +252,51 @@ export class PlayerController {
       avatarRig.root.position.x = this.position.x;
       avatarRig.root.position.z = this.position.z;
       avatarRig.root.rotation.y = this.rotationY;
-      avatarRig.updateAnimation(performance.now() / 1000, this.isMoving, this.isRunning, this.isSitting, this.currentEmote);
+
+      // In first-person view, hide the local avatar to prevent clipping into view
+      avatarRig.root.visible = this.cameraMode === 'third';
+
+      if (this.cameraMode === 'third') {
+        avatarRig.updateAnimation(performance.now() / 1000, this.isMoving, this.isRunning, this.isSitting, this.currentEmote);
+      }
     }
 
-    // 3. Update third-person camera position
-    const offsetX = Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
-    const offsetY = Math.sin(this.cameraPitch) * this.cameraDistance + 1.2;
-    const offsetZ = Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
+    // 3. Update camera position & orientation
+    if (this.cameraMode === 'first') {
+      // First Person Camera: placed exactly at avatar eye height
+      const eyeHeight = this.isSitting ? 0.85 : 1.18;
+      this.camera.position.set(
+        this.position.x,
+        this.position.y + eyeHeight,
+        this.position.z
+      );
 
-    this.targetCameraPos.set(
-      this.position.x + offsetX,
-      this.position.y + offsetY,
-      this.position.z + offsetZ
-    );
+      // Aim camera towards camera yaw & pitch
+      const forwardX = -Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch);
+      const forwardY = -Math.sin(this.cameraPitch);
+      const forwardZ = -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch);
 
-    // Smooth camera lag
-    this.camera.position.lerp(this.targetCameraPos, Math.min(1.0, delta * 8));
-    this.camera.lookAt(this.position.x, this.position.y + 1.2, this.position.z);
+      this.camera.lookAt(
+        this.camera.position.x + forwardX * 10,
+        this.camera.position.y + forwardY * 10,
+        this.camera.position.z + forwardZ * 10
+      );
+    } else {
+      // Third Person Orbit Camera
+      const offsetX = Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
+      const offsetY = Math.sin(this.cameraPitch) * this.cameraDistance + 1.2;
+      const offsetZ = Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch) * this.cameraDistance;
+
+      this.targetCameraPos.set(
+        this.position.x + offsetX,
+        this.position.y + offsetY,
+        this.position.z + offsetZ
+      );
+
+      // Smooth camera lag
+      this.camera.position.lerp(this.targetCameraPos, Math.min(1.0, delta * 8));
+      this.camera.lookAt(this.position.x, this.position.y + 1.2, this.position.z);
+    }
   }
 
   public playEmote(emote: string) {

@@ -108,6 +108,61 @@ describe('Discord TradingView Bot Signal Relay & Embed Parser', () => {
     expect(m1Scalp.success).toBe(true);
     expect(m1Scalp.signal?.tier).toBe('M1');
   });
+
+  it('keeps trades active if not Full TP (Entry or 2/3 TP) and marks FULL_TP when Full TP arrives', () => {
+    // 1. Entry event -> ACTIVE
+    const entryRes = discordSignalRelay.processDiscordPayload({
+      id: 'test_lifecycle_entry_' + Date.now(),
+      embeds: [
+        {
+          title: 'Lệnh nhóm VIP - Bot Liquidation',
+          fields: [
+            { name: 'Side:', value: 'SHORT 🔴' },
+            { name: 'Coin:', value: 'ADA/USD' },
+            { name: 'Timeframe:', value: 'm1' },
+            { name: 'TP:', value: '$0.70' },
+            { name: 'Entry:', value: '$0.75' },
+            { name: 'SL:', value: '$0.78' },
+            { name: 'Event:', value: 'Entry' },
+          ],
+        },
+      ],
+    });
+    expect(entryRes.success).toBe(true);
+    expect(entryRes.signal?.status).toBe('ACTIVE');
+
+    // Should be returned by getActiveSignals
+    const activeBefore = db.getActiveSignals(20);
+    const adaActive = activeBefore.find((s) => s.symbol === 'ADA/USD');
+    expect(adaActive).toBeDefined();
+    expect(adaActive?.status).toBe('ACTIVE');
+
+    // 2. Full TP event -> marks prior trades as FULL_TP
+    const fullTpRes = discordSignalRelay.processDiscordPayload({
+      id: 'test_lifecycle_fulltp_' + Date.now(),
+      embeds: [
+        {
+          title: 'Lệnh nhóm VIP - Bot Liquidation',
+          fields: [
+            { name: 'Side:', value: 'SHORT 🔴' },
+            { name: 'Coin:', value: 'ADA/USD' },
+            { name: 'Timeframe:', value: 'm1' },
+            { name: 'TP:', value: '$0.70' },
+            { name: 'Entry:', value: '$0.75' },
+            { name: 'SL:', value: '$0.78' },
+            { name: 'Event:', value: 'Full TP' },
+          ],
+        },
+      ],
+    });
+    expect(fullTpRes.success).toBe(true);
+    expect(fullTpRes.signal?.status).toBe('FULL_TP');
+
+    // In getActiveSignals, ADA/USD should no longer appear
+    const activeAfter = db.getActiveSignals(20);
+    const adaActiveAfter = activeAfter.find((s) => s.symbol === 'ADA/USD');
+    expect(adaActiveAfter).toBeUndefined();
+  });
 });
 
 describe('Economy Credit System & Tea Luck Boost', () => {

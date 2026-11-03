@@ -222,29 +222,70 @@ export class AppDatabase {
     );
   }
 
+  public markSignalFullTP(symbol: string) {
+    const stmt = this.db.prepare(`
+      UPDATE signals
+      SET status = 'FULL_TP'
+      WHERE symbol = ? AND status = 'ACTIVE'
+    `);
+    stmt.run(symbol);
+  }
+
   public getActiveSignals(limit = 20, tier?: 'VIP' | 'M1'): SignalData[] {
-    const now = Date.now();
     let stmt;
     let rows: any[];
 
     if (tier) {
       stmt = this.db.prepare(`
         SELECT * FROM signals
-        WHERE status = 'ACTIVE' AND expires_at > ? AND tier = ?
+        WHERE status = 'ACTIVE'
+          AND status != 'FULL_TP'
+          AND (note IS NULL OR note NOT LIKE '%Full TP%')
+          AND tier = ?
         ORDER BY created_at DESC
         LIMIT ?
       `);
-      rows = stmt.all(now, tier, limit) as any[];
+      rows = stmt.all(tier, limit) as any[];
     } else {
       stmt = this.db.prepare(`
         SELECT * FROM signals
-        WHERE status = 'ACTIVE' AND expires_at > ?
+        WHERE status = 'ACTIVE'
+          AND status != 'FULL_TP'
+          AND (note IS NULL OR note NOT LIKE '%Full TP%')
         ORDER BY created_at DESC
         LIMIT ?
       `);
-      rows = stmt.all(now, limit) as any[];
+      rows = stmt.all(limit) as any[];
     }
 
+    return rows.map((r) => ({
+      id: r.id,
+      symbol: r.symbol,
+      market: r.market,
+      direction: r.direction,
+      entry: r.entry,
+      stopLoss: r.stop_loss,
+      takeProfit: JSON.parse(r.take_profit_json),
+      timeframe: r.timeframe,
+      note: r.note || '',
+      source: r.source,
+      isDemo: Boolean(r.is_demo),
+      channelId: r.channel_id || undefined,
+      tier: (r.tier as 'VIP' | 'M1') || 'M1',
+      createdAt: r.created_at,
+      expiresAt: r.expires_at,
+      status: r.status,
+    }));
+  }
+
+  public getNonFullTPSignals(limit = 20): SignalData[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM signals
+      WHERE status != 'FULL_TP' AND (note IS NULL OR note NOT LIKE '%Full TP%')
+      ORDER BY created_at DESC
+      LIMIT ?
+    `);
+    const rows = stmt.all(limit) as any[];
     return rows.map((r) => ({
       id: r.id,
       symbol: r.symbol,
